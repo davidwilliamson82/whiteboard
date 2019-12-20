@@ -289,6 +289,37 @@
 	  )
 	}
 
+	getCircumference () {
+	  return this.getAngle() * this.getMagnitude()
+	}
+
+	getCalendarDays () {
+	  if (
+	    this.x > wState[TIME_PADDING].x
+	      && this.x < (wState[SCREEN_SIZE].x - wState[TIME_PADDING].x)
+	      && this.y > (wState[TIME_PADDING].y * 4)
+	      && this.y < (wState[SCREEN_SIZE].y - wState[TIME_PADDING].y)
+	  ) {
+	    return new Vector2(
+	      Math.floor((this.x - wState[TIME_PADDING].x) / wState[CALENDAR_OFFSET].x),
+	      Math.floor((this.y - wState[TIME_PADDING].y * 4) / wState[CALENDAR_OFFSET].y)
+	    )	    
+	  }
+	}
+	
+	getPlannerHours () {
+	  if (this.x > wState[TIME_PADDING].x && this.y > wState[TIME_PADDING].y) {
+	    return new Vector2(
+	      Math.floor((this.x - wState[TIME_PADDING].x) / wState[PLANNER_OFFSET].x),
+	      (this.y - wState[TIME_PADDING].y) / (wState[PLANNER_OFFSET].y * 2)
+	    )
+	  }
+	}
+	
+	getClockTime () {
+	  return ((this.getAngle(getCenter()) + (Math.PI / 2)) * 30 / Math.PI) % 60
+	}
+
 	copy () {
 	  return new Vector2(this.x, this.y);
 	}
@@ -349,33 +380,6 @@
 	transform (matrix) {
 	  return new Vector2(this.x*matrix.a + this.y*matrix.b, this.x*matrix.c + this.y*matrix.d);
 	}
-
-	/* getSize () {
-	   return this.transform(flipVert).scale(unit);
-	   } */
-
-	/* pix () {
-	   return this.getSize().add(center);
-	   } */
-
-	/* units () {
-	   return this.add(center.scale(-1)).scale(1/unit).transform(flipVert);
-	   } */
-
-	/* draw (ctx, fv, max) {
-	   if (!max) {max = vectorSpacing;}
-	   var sv = this.normalize(3); // used to draw the arrowhead.
-	   var tv = this.normalize(vectorSpacing*this.mag()/max).size();
-	   if (fv) {
-	   fv = fv.pix();
-	   } else {
-	   fv = center;
-	   }
-	   tv = tv.add(fv);
-	   drawLine(ctx, fv, tv, '#000000');
-	   drawLine(ctx, tv, {'x': tv.x - sv.x + sv.y, 'y': tv.y + sv.x + sv.y}, '#000000');
-	   drawLine(ctx, tv, {'x': tv.x - sv.x - sv.y, 'y': tv.y - sv.x + sv.y}, '#000000');
-	   } */
       }
 
       // UTILITIES
@@ -676,7 +680,9 @@
       const DAYS = 'DAYS'
       const HOURS = 'HOURS'
       const TIME_PADDING = 'TIME_PADDING'
-      const TIME_UNITS = 'TIME_UNITS'
+      const CALENDAR_OFFSET = 'CALENDAR_OFFSET'
+      const PLANNER_OFFSET = 'PLANNER_OFFSET'
+      const CLOCK_ANGLES = 'CLOCK_ANGLES'
       const MARKS = 'MARKS'
       const SENSOR = 'SENSOR'
 
@@ -870,6 +876,7 @@
 	},
 	mouseUp: (toolLocation) => {}
       }
+
       tools[COMMITTED] = {
 	mouseDown: (toolLocation) => {
 	  wState[ANGLE] = null
@@ -906,14 +913,15 @@
 	},
 	mouseUp: (toolLocation) => {}
       }
+
       tools[ELLIPSE] = {
 	mouseDown: (toolLocation) => {
 	  const horizontal = (toolLocation.x - wState[MOUSE_DOWN_LOCATION].x) / 2
 	  const vertical = (toolLocation.y - wState[MOUSE_DOWN_LOCATION].y) / 2  
 	  const ellipse = document.createElementNS(svgNameSpace, 'ellipse')
 	  ellipse.setAttribute('id', 'ellipse')
-	  ellipse.setAttribute('stroke', layers[TOOLS].strokeStyle)
-	  ellipse.setAttribute('fill', wState[FILL_ACTIVE] ? layers[TOOLS].fillStyle : 'none')
+	  ellipse.setAttribute('stroke', wState[FILL_ACTIVE] || spaceIsDown ? 'none' : wState[TOOLS_COLOR].getRgba())
+	  ellipse.setAttribute('fill', wState[FILL_ACTIVE] || spaceIsDown ? wState[TOOLS_COLOR].getRgba() : 'none')
 	  ellipse.setAttribute('stroke-width', wState[BRUSHES][wState[BRUSH]].width)
 	  ellipse.setAttribute('cx', wState[MOUSE_DOWN_LOCATION].x + horizontal)
 	  ellipse.setAttribute('cy', wState[MOUSE_DOWN_LOCATION].y + vertical)
@@ -926,6 +934,8 @@
 	    const horizontal = (constraints[constraint](toolLocation).x - wState[MOUSE_DOWN_LOCATION].x) / 2
 	    const vertical = (constraints[constraint](toolLocation).y - wState[MOUSE_DOWN_LOCATION].y) / 2  
 	    const ellipse = layers[TOOLS].childNodes[0]
+	    ellipse.setAttribute('stroke', wState[FILL_ACTIVE] || spaceIsDown ? 'none' : wState[TOOLS_COLOR].getRgba())
+	    ellipse.setAttribute('fill', wState[FILL_ACTIVE] || spaceIsDown ? wState[TOOLS_COLOR].getRgba() : 'none')
 	    ellipse.setAttribute('cx', wState[MOUSE_DOWN_LOCATION].x + horizontal)
 	    ellipse.setAttribute('cy', wState[MOUSE_DOWN_LOCATION].y + vertical)
 	    ellipse.setAttribute('rx', Math.abs(horizontal))
@@ -962,12 +972,13 @@
 	  }
 	}
       }
+
       tools[RECTANGLE] = {
 	mouseDown: (toolLocation) => {
 	  const rectangle = document.createElementNS(svgNameSpace, 'rect')
 	  rectangle.setAttribute('id', 'rectangle')
-	  rectangle.setAttribute('stroke', layers[TOOLS].strokeStyle)
-	  rectangle.setAttribute('fill', wState[FILL_ACTIVE] ? layers[TOOLS].fillStyle : 'none')
+	  rectangle.setAttribute('stroke', wState[FILL_ACTIVE] || spaceIsDown ? 'none' : wState[TOOLS_COLOR].getRgba())
+	  rectangle.setAttribute('fill', wState[FILL_ACTIVE] || spaceIsDown ? wState[TOOLS_COLOR].getRgba() : 'none')
 	  rectangle.setAttribute('stroke-width', wState[BRUSHES][wState[BRUSH]].width)
 	  rectangle.setAttribute('x', Math.min(toolLocation.x, wState[MOUSE_DOWN_LOCATION].x))
 	  rectangle.setAttribute('y', Math.min(toolLocation.y, wState[MOUSE_DOWN_LOCATION].y))
@@ -980,6 +991,8 @@
 	    const width = Math.abs(constraints[constraint](toolLocation).x - wState[MOUSE_MOVE_LOCATION].x)
 	    const height = Math.abs(constraints[constraint](toolLocation).y - wState[MOUSE_MOVE_LOCATION].y)
 	    const rectangle = layers[TOOLS].childNodes[0]
+	    rectangle.setAttribute('stroke', wState[FILL_ACTIVE] || spaceIsDown ? 'none' : wState[TOOLS_COLOR].getRgba())
+	    rectangle.setAttribute('fill', wState[FILL_ACTIVE] || spaceIsDown ? wState[TOOLS_COLOR].getRgba() : 'none')
 	    rectangle.setAttribute('x', Math.min(constraints[constraint](toolLocation).x, wState[MOUSE_DOWN_LOCATION].x))
 	    rectangle.setAttribute('y', Math.min(constraints[constraint](toolLocation).y, wState[MOUSE_DOWN_LOCATION].y))
 	    rectangle.setAttribute('width', Math.abs(constraints[constraint](toolLocation).x - wState[MOUSE_DOWN_LOCATION].x))
@@ -1011,7 +1024,7 @@
 	    TOOLS,
 	    wState[MOUSE_DOWN_LOCATION],
 	    toolLocation,
-	    new Color(layers[TOOLS].strokeStyle),
+	    wState[TOOLS_COLOR],
 	    wState[BRUSHES][wState[BRUSH]].width
 	  )
 	},
@@ -1022,7 +1035,7 @@
 	      TOOLS,
 	      wState[MOUSE_DOWN_LOCATION],
 	      constraints[constraint](toolLocation),
-	      new Color(layers[TOOLS].strokeStyle),
+	      wState[TOOLS_COLOR],
 	      wState[BRUSHES][wState[BRUSH]].width
 	    )
 	  }
@@ -1041,6 +1054,7 @@
 	  }
 	}
       }
+
       tools[TEXT] = {
 	mouseDown: (toolLocation) => {
 	  drawTextCursor()
@@ -1048,25 +1062,40 @@
 	mouseMove: (toolLocation) => {},
 	mouseUp: (toolLocation) => {}
       }
+      
       tools[MEASURE] = {
 	mouseDown: (toolLocation) => {
 	  drawLine(
 	    TOOLS,
 	    wState[MOUSE_DOWN_LOCATION],
 	    new Vector2(toolLocation.x, toolLocation.y),
-	    new Color(layers[TOOLS].strokeStyle),
+	    wState[TOOLS_COLOR],
 	    6
 	  )
 	},
 	mouseMove: (toolLocation) => {
 	  layers[TOOLS].innerHTML = ''
-	  drawLine(
-	    TOOLS,
-	    wState[MOUSE_DOWN_LOCATION],
-	    new Vector2(toolLocation.x, toolLocation.y),
-	    new Color(layers[TOOLS].strokeStyle),
-	    6
-	  )
+	  if (wState[GRID_TYPE].x === 3 && wState[GRID_TYPE].y === 2) {
+	    const center = getCenter()
+	    const radius = wState[MOUSE_DOWN_LOCATION].getDistance(center)
+	    const end = constrainArc(center, wState[MOUSE_DOWN_LOCATION], toolLocation)
+	    const path = document.createElementNS(svgNameSpace, 'path')
+	    const bigArc = (toolLocation.getAngle(center) - wState[MOUSE_DOWN_LOCATION].getAngle(center) + (Math.PI * 2)) % (Math.PI * 2) > Math.PI ? 1 : 0
+	    path.setAttribute('fill', 'none')
+	    path.setAttribute('d', `M${wState[MOUSE_DOWN_LOCATION].x},${wState[MOUSE_DOWN_LOCATION].y} A ${radius} ${radius} 0 ${bigArc} 1 ${end.x} ${end.y}`)
+	    path.setAttribute('stroke', wState[TOOLS_COLOR].getRgba())
+	    path.setAttribute('stroke-width', '6px')
+	    layers[TOOLS].appendChild(path)
+	  } else {
+	    drawLine(
+	      TOOLS,
+	      wState[MOUSE_DOWN_LOCATION],
+	      new Vector2(toolLocation.x, toolLocation.y),
+	      wState[TOOLS_COLOR],
+	      6
+	    )
+	  }
+
 	},
 	mouseUp: (toolLocation) => {
 	  const mouseDownVector = new Vector2(wState[MOUSE_DOWN_LOCATION])
@@ -1076,18 +1105,41 @@
 	    wState[MOUSE_UP_LOCATION],
 	    wState[MOUSE_UP_LOCATION].getSquareUnits(),
 	    wState[MOUSE_UP_LOCATION].getHexUnits(),
-	    wState[MOUSE_UP_LOCATION]
+	    [
+	      wState[MOUSE_UP_LOCATION].getCalendarDays(),
+	      wState[MOUSE_UP_LOCATION].getPlannerHours(),
+	      wState[MOUSE_UP_LOCATION].getClockTime()
+	    ][wState[GRID_TYPE].y]
 	  ][wState[GRID_TYPE].x]
 	  const downUnits = [
 	    wState[MOUSE_DOWN_LOCATION],
 	    wState[MOUSE_DOWN_LOCATION].getSquareUnits(),
 	    wState[MOUSE_DOWN_LOCATION].getHexUnits(),
-	    wState[MOUSE_DOWN_LOCATION]
+	    [
+	      wState[MOUSE_DOWN_LOCATION].getCalendarDays(),
+	      wState[MOUSE_DOWN_LOCATION].getPlannerHours(),
+	      wState[MOUSE_DOWN_LOCATION].getClockTime()
+	    ][wState[GRID_TYPE].y]
 	  ][wState[GRID_TYPE].x]
-
-	  const distance = downUnits.getDistance(upUnits)
-
-	  console.log(`measurements:\n  angle: ${(angle * 180 / Math.PI).toFixed(0)}°\n  distance: ${distance.toFixed(2)}`)
+	  if (wState[GRID_TYPE].x !== 3) {
+	    const distance = downUnits.getDistance(upUnits)
+	    console.log(`measurements:\n  angle: ${(angle * 180 / Math.PI).toFixed(0)}°\n  distance: ${distance.toFixed(2)}`)
+	  } else {
+	    switch (wState[GRID_TYPE].y) {
+	    case 0: 
+	      const days = Math.abs(upUnits.x - downUnits.x + ((upUnits.y - downUnits.y) * 7))
+	      console.log(`measurement:\n  days: ${days}`)
+	      break
+	    case 1:
+	      const hours = Math.abs(((upUnits.x - downUnits.x) * 24) + upUnits.y - downUnits.y)
+	      console.log(`measurement:\n  hours: ${Math.floor(hours)}\n  minutes: ${Math.round((hours % 1) * 60)}`)
+	      break
+	    case 2:
+	      const minutes = (upUnits - downUnits + 60) % 60
+	      console.log(`measurement:\n  minutes: ${Math.floor(minutes)}\n  seconds: ${Math.round((minutes % 1) * 60)}`)
+	      break
+	    }
+	  }
 	  setWhiteboardState(MEASUREMENT, new Vector2(
 	    wState[MOUSE_UP_LOCATION].x - wState[MOUSE_DOWN_LOCATION].x,
 	    wState[MOUSE_UP_LOCATION].y - wState[MOUSE_DOWN_LOCATION].y
@@ -1495,7 +1547,7 @@
 	  const rectangle = document.createElementNS(svgNameSpace, 'rect')
 	  rectangle.setAttribute('id', 'rectangle')
 	  rectangle.setAttribute('stroke', 'none')
-	  rectangle.setAttribute('fill', layers[TOOLS].fillStyle)
+	  rectangle.setAttribute('fill', wState[TOOLS_COLOR].getRgba())
 	  rectangle.setAttribute('x', wState[PRINT_HEAD_LOCATION].x)
 	  rectangle.setAttribute('y', wState[PRINT_HEAD_LOCATION].y - fontSizes[wState[FONT_HEIGHT]])
 	  rectangle.setAttribute('width', wState[FONT_WIDTH])
@@ -1752,10 +1804,7 @@
       const drawPlanner = (options) => {
 	const {
 	  origin=wState[VANISHING_POINT], 
-	  offset=new Vector2(
-	      (wState[BOARD_SIZE].x - wState[TIME_PADDING].x * 2) / 7,
-	      (wState[BOARD_SIZE].y - wState[TIME_PADDING].y) / 48
-	    )
+	  offset=wState[PLANNER_OFFSET]
 	} = options
 	Object.assign(daysElement.style, {
 	  width: `${wState[BOARD_SIZE].x - wState[TIME_PADDING].x}px`,
@@ -1833,7 +1882,7 @@
 	const theseDays = months[today.getMonth()].days + hasLeapDay(today)
 	let daysOffset = (8 + today.getDay() - (today.getDate() % 7)) % 7
 	const rows = Math.ceil((daysOffset + theseDays) / 7)
-	const printOffset = new Vector2(
+	wState[CALENDAR_OFFSET].setCoordinates(
 	  (wState[BOARD_SIZE].x - wState[TIME_PADDING].x * 2) / 7,
 	  (wState[SCREEN_SIZE].y - wState[TIME_PADDING].y * 5) / rows
 	)
@@ -1870,7 +1919,7 @@
 	    wState[GRID_COLOR],
 	    2
 	  )
-	  printHead.y += printOffset.y
+	  printHead.y += wState[CALENDAR_OFFSET].y
 	}
 	
 	while (printHead.x < wState[BOARD_SIZE].x) {
@@ -1887,7 +1936,7 @@
 	    wState[GRID_COLOR],
 	    2
 	  )
-	  printHead.x += printOffset.x
+	  printHead.x += wState[CALENDAR_OFFSET].x
 	}
 	
 	drawText(
@@ -1906,7 +1955,7 @@
 	    GRID, 
 	    weekday,
 	    new Vector2(
-	      wState[TIME_PADDING].x + (index * printOffset.x) + (printOffset.x / 2) - (weekday.length * 10 * 0.59),
+	      wState[TIME_PADDING].x + (index * wState[CALENDAR_OFFSET].x) + (wState[CALENDAR_OFFSET].x / 2) - (weekday.length * 10 * 0.59),
 	      wState[TIME_PADDING].y * 4 - 10
 	    ),
 	    wState[GRID_COLOR],
@@ -1915,7 +1964,7 @@
 	})
 	
 	printHead.setCoordinates(
-	  wState[TIME_PADDING].x + (printOffset.x * daysOffset),
+	  wState[TIME_PADDING].x + (wState[CALENDAR_OFFSET].x * daysOffset),
 	  wState[TIME_PADDING].y * 4
 	)
 	let thisDate = 1
@@ -1935,10 +1984,10 @@
 	  if ((thisDate + daysOffset) % 7 === 0) {
 	    printHead.setCoordinates(
 	      wState[TIME_PADDING].x,
-	      printHead.y + printOffset.y
+	      printHead.y + wState[CALENDAR_OFFSET].y
 	    )
 	  } else {
-	    printHead.x += printOffset.x
+	    printHead.x += wState[CALENDAR_OFFSET].x
 	  }
 	  thisDate ++
 	}
@@ -2018,8 +2067,6 @@
 	  layers[MARKS].strokeStyle = color.getRgba()
 	  layers[MARKS].fillStyle = color.getRgba()
 	  layers[MARKS].globalAlpha = color.alpha
-	  layers[TOOLS].strokeStyle = new Color(Object.assign({}, { ...color, alpha: 0.5 })).getRgba()
-	  layers[TOOLS].fillStyle = new Color(Object.assign({}, { ...color, alpha: 0.5 })).getRgba()
 	  const brushes = [...wState[BRUSHES]]
 	  brushes[wState[BRUSH]].color = color
 	  setWhiteboardState(BRUSHES, brushes)
@@ -2035,6 +2082,9 @@
       }
 
       const drawGrid = (type, units) => {
+	if (type.x === 0) {
+	  return
+	}
 	const getCoefficient = (pixels, factor) => Math.pow(10, 1 - Math.floor(Math.log10(pixels / factor)))
 	if (storedFunctions.length > 0) {
 	  for (let storedFunction of storedFunctions) {
@@ -2135,6 +2185,10 @@
 	console.log(`vanish: (${wState[VANISHING_POINT].x}, ${wState[VANISHING_POINT].y})`)
 	setWhiteboardState(VANISHING_POINT, wState[VANISHING_POINT])
 	setGrid()
+      }
+
+      const getCenter = (size='SCREEN') => {
+	return new Vector2(wState[`${size}_SIZE`].scale(1 / 2))
       }
 
       const addAngle = (degrees) => {
@@ -2780,7 +2834,12 @@
       wState[OVERLAY_COLOR] = new Color(wState[OVERLAY_COLOR])
       wState[GRID_COLOR] = new Color(wState[GRID_COLOR])
       wState[GRID_TYPE] = new Vector2(wState[GRID_TYPE])
-      wState[SQUARE_GRID_UNITS] = new Vector2(wState[SQUARE_GRID_UNITS])
+      wState[TIME_PADDING] = new Vector2(wState[TIME_PADDING])
+      wState[CALENDAR_OFFSET] = wState[SQUARE_GRID_UNITS] = new Vector2(wState[SQUARE_GRID_UNITS])
+      wState[PLANNER_OFFSET] = new Vector2(
+	(wState[BOARD_SIZE].x - wState[TIME_PADDING].x * 2) / 7,
+	(wState[BOARD_SIZE].y - wState[TIME_PADDING].y) / 48
+      )
       wState[TIME_PADDING] = new Vector2(wState[TIME_PADDING])
       wState[BRUSHES].forEach((brush) => {
 	brush.color = new Color(brush.color)
