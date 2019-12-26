@@ -661,6 +661,19 @@
 	}
       }
 
+      const toggleWallpaperStyle = () => {
+	if (dom[WALLPAPER].style.backgroundAttachment === 'fixed') {
+	  dom[WALLPAPER].style.backgroundAttachment = 'scroll'
+	} else {
+	  dom[WALLPAPER].style.backgroundAttachment = 'fixed'
+	}
+	if (dom[WALLPAPER].style.backgroundSize === `${wState[SCREEN_SIZE].x}px ${wState[SCREEN_SIZE].y}px`) {
+	  dom[WALLPAPER].style.backgroundSize = 'cover'
+	} else {
+	  dom[WALLPAPER].style.backgroundSize = `${wState[SCREEN_SIZE].x}px ${wState[SCREEN_SIZE].y}px`
+	}
+      }
+
       const clearLayer = (input) => {
 	const layer = typeof input === 'string' ?  layers[input] : input
 	if (layer.nodeName === 'svg') {
