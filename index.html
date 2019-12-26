@@ -861,17 +861,13 @@
 
       constraints[HEXAGONAL] = (toolLocation) => {
 	const angle = toolLocation.getAngle(wState[MOUSE_DOWN_LOCATION]) % Math.PI
-	switch (true) {
-	case angle <= Math.PI / 3:
-	  return constrainLine(wState[MOUSE_DOWN_LOCATION].add(new Vector2({ angle: Math.PI / 6 })), wState[MOUSE_DOWN_LOCATION], toolLocation)
-	  break
-	case (angle > Math.PI / 3) && (angle <= Math.PI * 2 / 3):
-	  return new Vector2(wState[MOUSE_DOWN_LOCATION].x, toolLocation.y)
-	  break
-	case (angle > Math.PI * 2 / 3) && (angle <= Math.PI):
-	  return constrainLine(wState[MOUSE_DOWN_LOCATION].add(new Vector2({ angle: Math.PI * 5 / 6 })), wState[MOUSE_DOWN_LOCATION], toolLocation)
-	  break
-	}
+	return constrainLine(
+	  wState[MOUSE_DOWN_LOCATION].add(new Vector2({ 
+	    angle: (Math.round(((toolLocation.getAngle(wState[MOUSE_DOWN_LOCATION]) % Math.PI) - wState[HEX_ANGLE]) * 3 / Math.PI) * Math.PI / 3) + wState[HEX_ANGLE]
+	  })),
+	  wState[MOUSE_DOWN_LOCATION],
+	  toolLocation
+	)
       }
 
       constraints[DIAGONAL] = (toolLocation) => {
