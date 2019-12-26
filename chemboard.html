@@ -11,6 +11,9 @@
     <meta name="viewport" content="width=device-width, height=device-height initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
     <meta name="apple-mobile-web-app-capable" content="yes" /> 
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <style> 
      body {
        font-family: 'Courier New';
@@ -233,7 +236,7 @@
 	  }
 	}
 	
-	setSquareUnits (x, y) {
+	setRectangularOffset (x, y) {
 	  if (typeof x === 'string') {
 	    x = mapStringToNumberArray(x)
 	  }
@@ -244,48 +247,51 @@
 		y: x[1]
 	      })
 	    } else {
-	      Object.assign(this, x.scale(wState[SQUARE_GRID_UNITS]))
+	      Object.assign(this, x.scale(wState[RECTANGULAR_OFFSET]))
 	    }
 	  } else {
 	    Object.assign(this, { 
-	      x: x * wState[SQUARE_GRID_UNITS].x,
-	      y: y * wState[SQUARE_GRID_UNITS].y
+	      x: x * wState[RECTANGULAR_OFFSET].x,
+	      y: y * wState[RECTANGULAR_OFFSET].y
 	    })
 	  }
 	}
 	
-	setHexUnits (x, y) {
-	  if (typeof x === 'string') {
-	    x = mapStringToNumberArray(x)
+	setHexOffset (magnitude, angle) {
+	  if (typeof magnitude === 'string') {
+	    magnitude = mapStringToNumberArray(magnitude)
 	  }
-	  if (typeof x === 'object') {
-	    if (Array.isArray(x)) {
-	      Object.assign(this, {
-		x: x[0],
-		y: x[1]
-	      })
+	  if (typeof magnitude === 'object') {
+	    if (Array.isArray(magnitude)) {
+	      Object.assign(this, new Vector2({
+		magnitude: magnitude[0] * wState[HEX_MAGNITUDE],
+		angle: magnitude[1]
+	      }))
 	    } else {
-	      Object.assign(this, x.scale(wState[HEX_GRID_UNIT]))
+	      Object.assign(this, new Vector2({ 
+		magnitude: magnitude.getMagnitude() * wState[HEX_MAGNITUDE],
+		angle: magnitude.getAngle()
+	      }))
 	    }
 	  } else {
-	    Object.assign(this, { 
-	      x: x * wState[HEX_GRID_UNIT],
-	      y: y * wState[HEX_GRID_UNIT]
-	    })
+	    Object.assign(this, new Vector2({ 
+	      magnitude: magnitude * wState[HEX_MAGNITUDE], 
+	      angle
+	    }))
 	  }
 	}
 
-	getSquareUnits () {
+	getRectangularOffset () {
 	  return new Vector2(
-	    this.x / wState[SQUARE_GRID_UNITS].x,
-	    this.y / wState[SQUARE_GRID_UNITS].y
+	    this.x / wState[RECTANGULAR_OFFSET].x,
+	    this.y / wState[RECTANGULAR_OFFSET].y
 	  )
 	}
 
-	getHexUnits () {
+	getHexOffset () {
 	  return new Vector2(
-	    this.x / wState[HEX_GRID_UNIT],
-	    this.y / wState[HEX_GRID_UNIT]
+	    this.x / wState[HEX_MAGNITUDE],
+	    this.y / wState[HEX_MAGNITUDE]
 	  )
 	}
 
@@ -335,21 +341,37 @@
 	  return new Vector2(this.x * s.x, this.y * s.y)
 	}
 
-	getMagnitude () {
-	  return (this.x ** 2 + this.y ** 2) ** 0.5
-	}
-
-	getDistance (v) {
+	getMagnitude (v) {
 	  if (!v) {
 	    v = new Vector2(0, 0)
 	  }
-	  return ((this.x - v.x)**2 + (this.y - v.y)**2)**0.5;
+	  return Math.sqrt((this.x - v.x) ** 2 + (this.y - v.y) ** 2);
 	}
 
-	getAngle (v) {
-	  if (!v) {
-	    v = new Vector2(0, 0)
+	dot (v) {
+	  return this.x * v.x + this.y * v.y
+	}
+
+	project (lineAngle=0, linePoint=globalOrigin) {
+	  if (typeof linePoint === 'number') {
+	    linePoint = new Vector2(0, linePoint)
 	  }
+	  const lineSlope = Math.tan(lineAngle)
+	  const lineYIntercept = linePoint.y - lineSlope * linePoint.x
+	  const thisSlope = -(lineSlope ** -1)
+	  const thisYIntercept = this.y - thisSlope * this.x
+	  const thisX = (thisYIntercept - lineYIntercept) / (lineSlope - thisSlope)
+	  return new Vector2(
+	    thisX,
+	    lineSlope * thisX + lineYIntercept
+	  )
+	}
+
+	getSlope (v=globalOrigin) {
+	  (this.y - v.y) / (this.x - v.x)
+	}
+
+	getAngle (v=globalOrigin) {
 	  if (this.x === v.x) {
 	    return this.y > v.y 
 	      ? Math.PI / 2 
@@ -368,7 +390,7 @@
 	getPolarCoordinates () {
 	  return {
 	    angle: this.getAngle(),
-	    magnitude: this.getDistance()
+	    magnitude: this.getMagnitude()
 	  }
 	}
 
@@ -378,7 +400,19 @@
 	}
 
 	transform (matrix) {
-	  return new Vector2(this.x*matrix.a + this.y*matrix.b, this.x*matrix.c + this.y*matrix.d);
+	  return new Vector2(
+	    this.x * matrix.a + this.y * matrix.b, 
+	    this.x * matrix.c + this.y * matrix.d
+	  )
+	}
+
+	rotate (angle) {
+	  return this.transform({ 
+	    a: Math.cos(angle),
+	    b: -Math.sin(angle),
+	    c: Math.sin(angle),
+	    d: Math.cos(angle)
+	  })
 	}
       }
 
@@ -526,7 +560,7 @@
 	  sideLength * 7 / 16, 
 	  sideLength * 7 / 16
 	)
-	const distance = pixelLocation.getDistance(wheelCenter)
+	const distance = pixelLocation.getMagnitude(wheelCenter)
 	let { hue, sat, lum, alpha } = color
 	if (distance <= sideLength * 7 / 16) {
 	  if(distance > sideLength * 1 / 16) {
@@ -694,8 +728,9 @@
       const ZOOM = 'ZOOM' // Number
       const OVERLAY_COLOR = 'OVERLAY_COLOR' // Color *
       const GRID_TYPE = 'GRID_TYPE'
-      const SQUARE_GRID_UNITS = 'SQUARE_GRID_UNITS'
-      const HEX_GRID_UNIT = 'HEX_GRID_UNIT'
+      const RECTANGULAR_OFFSET = 'RECTANGULAR_OFFSET'
+      const HEX_MAGNITUDE = 'HEX_MAGNITUDE'
+      const HEX_ANGLE = 'HEX_ANGLE'
       const GRID_COLOR = 'GRID_COLOR'
       const GRID_WIDTH = 'GRID_WIDTH'
       const PROBLEM_IMAGE = 'PROBLEM_IMAGE' // String
@@ -884,7 +919,7 @@
 	mouseMove: (toolLocation) => {
 	  const offset = new Vector2(toolLocation.x, toolLocation.y)
 	  if (mouseIsDown 
-	    && toolLocation.getDistance(wState[MOUSE_DOWN_LOCATION]) > wState[COMMIT_RADIUS]
+	    && toolLocation.getMagnitude(wState[MOUSE_DOWN_LOCATION]) > wState[COMMIT_RADIUS]
 	    && constraints[constraint](toolLocation)) {
 	    if (wState[ANGLE] === null) {
 	      setWhiteboardState(ANGLE, toolLocation.getAngle(wState[MOUSE_DOWN_LOCATION]))
@@ -1077,7 +1112,7 @@
 	  layers[TOOLS].innerHTML = ''
 	  if (wState[GRID_TYPE].x === 3 && wState[GRID_TYPE].y === 2) {
 	    const center = getCenter()
-	    const radius = wState[MOUSE_DOWN_LOCATION].getDistance(center)
+	    const radius = wState[MOUSE_DOWN_LOCATION].getMagnitude(center)
 	    const end = constrainArc(center, wState[MOUSE_DOWN_LOCATION], toolLocation)
 	    const path = document.createElementNS(svgNameSpace, 'path')
 	    const bigArc = (toolLocation.getAngle(center) - wState[MOUSE_DOWN_LOCATION].getAngle(center) + (Math.PI * 2)) % (Math.PI * 2) > Math.PI ? 1 : 0
@@ -1101,20 +1136,20 @@
 	  const mouseDownVector = new Vector2(wState[MOUSE_DOWN_LOCATION])
 	  const mouseUpVector = new Vector2(wState[MOUSE_UP_LOCATION])
 	  const angle = wState[MOUSE_UP_LOCATION].scale({ x: 1, y: -1}).getAngle(wState[MOUSE_DOWN_LOCATION].scale({ x: 1, y: -1}))
-	  const upUnits = [
+	  const upOffset = [
 	    wState[MOUSE_UP_LOCATION],
-	    wState[MOUSE_UP_LOCATION].getSquareUnits(),
-	    wState[MOUSE_UP_LOCATION].getHexUnits(),
+	    wState[MOUSE_UP_LOCATION].getRectangularOffset(),
+	    wState[MOUSE_UP_LOCATION].getHexOffset(),
 	    [
 	      wState[MOUSE_UP_LOCATION].getCalendarDays(),
 	      wState[MOUSE_UP_LOCATION].getPlannerHours(),
 	      wState[MOUSE_UP_LOCATION].getClockTime()
 	    ][wState[GRID_TYPE].y]
 	  ][wState[GRID_TYPE].x]
-	  const downUnits = [
+	  const downOffset = [
 	    wState[MOUSE_DOWN_LOCATION],
-	    wState[MOUSE_DOWN_LOCATION].getSquareUnits(),
-	    wState[MOUSE_DOWN_LOCATION].getHexUnits(),
+	    wState[MOUSE_DOWN_LOCATION].getRectangularOffset(),
+	    wState[MOUSE_DOWN_LOCATION].getHexOffset(),
 	    [
 	      wState[MOUSE_DOWN_LOCATION].getCalendarDays(),
 	      wState[MOUSE_DOWN_LOCATION].getPlannerHours(),
@@ -1122,20 +1157,20 @@
 	    ][wState[GRID_TYPE].y]
 	  ][wState[GRID_TYPE].x]
 	  if (wState[GRID_TYPE].x !== 3) {
-	    const distance = downUnits.getDistance(upUnits)
+	    const distance = downOffset.getMagnitude(upOffset)
 	    console.log(`measurements:\n  angle: ${(angle * 180 / Math.PI).toFixed(0)}°\n  distance: ${distance.toFixed(2)}`)
 	  } else {
 	    switch (wState[GRID_TYPE].y) {
 	    case 0: 
-	      const days = Math.abs(upUnits.x - downUnits.x + ((upUnits.y - downUnits.y) * 7))
+	      const days = Math.abs(upOffset.x - downOffset.x + ((upOffset.y - downOffset.y) * 7))
 	      console.log(`measurement:\n  days: ${days}`)
 	      break
 	    case 1:
-	      const hours = Math.abs(((upUnits.x - downUnits.x) * 24) + upUnits.y - downUnits.y)
+	      const hours = Math.abs(((upOffset.x - downOffset.x) * 24) + upOffset.y - downOffset.y)
 	      console.log(`measurement:\n  hours: ${Math.floor(hours)}\n  minutes: ${Math.round((hours % 1) * 60)}`)
 	      break
 	    case 2:
-	      const minutes = (upUnits - downUnits + 60) % 60
+	      const minutes = (upOffset - downOffset + 60) % 60
 	      console.log(`measurement:\n  minutes: ${Math.floor(minutes)}\n  seconds: ${Math.round((minutes % 1) * 60)}`)
 	      break
 	    }
@@ -1191,38 +1226,52 @@
       tools[GRID] = {
 	mouseDown: (toolLocation) => {},
 	mouseMove: (toolLocation) => {
-	  const units = {
-	    square: new Vector2(
-	      (toolLocation.x - wState[VANISHING_POINT].x) / (wState[MOUSE_DOWN_LOCATION].x - wState[VANISHING_POINT].x),
-	      (toolLocation.y - wState[VANISHING_POINT].y) / (wState[MOUSE_DOWN_LOCATION].y - wState[VANISHING_POINT].y)
-	    ),
-	    hex: toolLocation.getDistance(wState[VANISHING_POINT]) / wState[MOUSE_DOWN_LOCATION].getDistance(wState[VANISHING_POINT])
+	  if (toolLocation.getMagnitude(wState[VANISHING_POINT]) > 10) {
+	    const offset = {
+	      rectangular: new Vector2(
+		(toolLocation.x - wState[VANISHING_POINT].x) / (wState[MOUSE_DOWN_LOCATION].x - wState[VANISHING_POINT].x),
+		(toolLocation.y - wState[VANISHING_POINT].y) / (wState[MOUSE_DOWN_LOCATION].y - wState[VANISHING_POINT].y)
+	      ),
+	      hex: {
+		magnitude: toolLocation.getMagnitude(wState[VANISHING_POINT]) / wState[MOUSE_DOWN_LOCATION].getMagnitude(wState[VANISHING_POINT]),
+		angle: toolLocation.getAngle(wState[VANISHING_POINT]) - wState[MOUSE_DOWN_LOCATION].getAngle(wState[VANISHING_POINT])
+	      }
+	    }
+	    clearLayer(GRID)
+	    drawGrid(wState[GRID_TYPE], {
+	      rectangular: wState[RECTANGULAR_OFFSET].scale(offset.rectangular),
+	      hex: { 
+		magnitude: wState[HEX_MAGNITUDE] * offset.hex.magnitude, 
+		angle: (((wState[HEX_ANGLE] + offset.hex.angle) - Math.PI / 6) % (Math.PI / 3)) + Math.PI / 6
+	      }
+	    })
+	    drawCircle(
+	      wState[VANISHING_POINT], 
+	      5, 
+	      wState[GRID_COLOR]
+	    )
 	  }
-	  clearLayer(GRID)
-	  drawGrid(wState[GRID_TYPE], {
-	    square: wState[SQUARE_GRID_UNITS].scale(units.square),
-	    hex: wState[HEX_GRID_UNIT] * units.hex
-	  })
-	  drawCircle(
-	    wState[VANISHING_POINT], 
-	    5, 
-	    wState[GRID_COLOR]
-	  )
 	},
 	mouseUp: (toolLocation) => {
-	  const units = {
-	    square: new Vector2(
-	      (toolLocation.x - wState[VANISHING_POINT].x) / (wState[MOUSE_DOWN_LOCATION].x - wState[VANISHING_POINT].x),
-	      (toolLocation.y - wState[VANISHING_POINT].y) / (wState[MOUSE_DOWN_LOCATION].y - wState[VANISHING_POINT].y)
-	    ),
-	    hex: toolLocation.getDistance(wState[VANISHING_POINT]) / wState[MOUSE_DOWN_LOCATION].getDistance(wState[VANISHING_POINT])
+	  if (toolLocation.getMagnitude(wState[VANISHING_POINT]) > 10) {
+	    const offset = {
+	      rectangular: new Vector2(
+		(toolLocation.x - wState[VANISHING_POINT].x) / (wState[MOUSE_DOWN_LOCATION].x - wState[VANISHING_POINT].x),
+		(toolLocation.y - wState[VANISHING_POINT].y) / (wState[MOUSE_DOWN_LOCATION].y - wState[VANISHING_POINT].y)
+	      ),
+	      hex: {
+		magnitude: toolLocation.getMagnitude(wState[VANISHING_POINT]) / wState[MOUSE_DOWN_LOCATION].getMagnitude(wState[VANISHING_POINT]),
+		angle: toolLocation.getAngle(wState[VANISHING_POINT]) - wState[MOUSE_DOWN_LOCATION].getAngle(wState[VANISHING_POINT])
+	      }
+	    }
+	    if (wState[GRID_TYPE].x === 1) {
+	      setWhiteboardState(RECTANGULAR_OFFSET, wState[RECTANGULAR_OFFSET].scale(offset.rectangular))
+	    } else if (wState[GRID_TYPE].x === 2) {
+	      setWhiteboardState(HEX_MAGNITUDE, wState[HEX_MAGNITUDE] * offset.hex.magnitude)
+	      setWhiteboardState(HEX_ANGLE, (((wState[HEX_ANGLE] + offset.hex.angle) - Math.PI / 6) % (Math.PI / 3)) + Math.PI / 6)
+	    }
+	    setGrid()
 	  }
-	  if (wState[GRID_TYPE].x === 1) {
-	    setWhiteboardState(SQUARE_GRID_UNITS, wState[SQUARE_GRID_UNITS].scale(units.square))
-	  } else if (wState[GRID_TYPE].x === 2) {
-	    setWhiteboardState(HEX_GRID_UNIT, wState[HEX_GRID_UNIT] * units.hex)
-	  }
-	  setGrid()
 	}
       }
 
@@ -1439,8 +1488,9 @@
       defaultState[BOARD_SCALE] = new Vector2(1, 2)
       defaultState[ZOOM] = 1
       defaultState[OVERLAY_COLOR] = new Color('rgba(255, 255, 255, 0.0)')
-      defaultState[SQUARE_GRID_UNITS] = new Vector2(60, 60) // Grid separated to four variables, for easy query strings.
-      defaultState[HEX_GRID_UNIT] = 60
+      defaultState[RECTANGULAR_OFFSET] = new Vector2(60, 60) // Grid separated to four variables, for easy query strings.
+      defaultState[HEX_MAGNITUDE] = 60
+      defaultState[HEX_ANGLE] = Math.PI / 6
       defaultState[GRID_TYPE] = new Vector2(0, 0)
       defaultState[GRID_WIDTH] = 2
       defaultState[GRID_COLOR] = new Color('rgba(0, 0, 0, 0.4)')
@@ -1578,10 +1628,10 @@
       }
 
       // DRAW GRIDS
-      const drawSquareDotsGrid = (options) => {
+      const drawRectangularDotsGrid = (options) => {
 	const {
 	  origin=wState[VANISHING_POINT], 
-	  offset=wState[SQUARE_GRID_UNITS]
+	  offset=wState[RECTANGULAR_OFFSET]
 	} = options
 	let head = new Vector2(
 	  origin.x % offset.x,
@@ -1605,7 +1655,7 @@
       const drawLinedGrid = (options) => {
 	const {
 	  origin=wState[VANISHING_POINT], 
-	  offset=wState[SQUARE_GRID_UNITS]
+	  offset=wState[RECTANGULAR_OFFSET]
 	} = options
       
 	let head = origin.y % offset.y
@@ -1619,10 +1669,10 @@
 	}
       }
 
-      const drawSquareGrid = (options) => {
+      const drawRectangularGrid = (options) => {
 	const {
 	  origin=wState[VANISHING_POINT], 
-	  offset=wState[SQUARE_GRID_UNITS]
+	  offset=wState[RECTANGULAR_OFFSET]
 	} = options
       
 	let head = new Vector2(
@@ -1650,12 +1700,14 @@
       const drawTriangleDotsGrid = (options) => {
 	const {
 	  origin=wState[VANISHING_POINT], 
-	  offset=wState[HEX_GRID_UNIT]
+	  offset=new Vector2({
+	    magnitude: wState[HEX_MAGNITUDE], 
+	    angle: wState[HEX_ANGLE] 
+	  })
 	} = options
-      
 	const headIntervals = new Vector2 (
-	  offset * Math.sqrt(3),
-	  offset
+	  offset.getMagnitude() * Math.sqrt(3),
+	  offset.getMagnitude()
 	)
 	let head = new Vector2(
 	  (origin.x % headIntervals.x) - headIntervals.x,
@@ -1688,12 +1740,15 @@
       const drawHexGrid = (options) => {
 	const {
 	  origin=wState[VANISHING_POINT], 
-	  offset=wState[HEX_GRID_UNIT]
+	  offset=new Vector2({
+	    magnitude: wState[HEX_MAGNITUDE], 
+	    angle: wState[HEX_ANGLE] 
+	  })
 	} = options
       
 	const headIntervals = new Vector2(
-	  offset * Math.sqrt(3),
-	  offset * 3
+	  offset.getMagnitude() * Math.sqrt(3),
+	  offset.getMagnitude() * 3
 	)
 	let head = new Vector2(
 	  (origin.x % headIntervals.x) - headIntervals.x,
@@ -1738,15 +1793,251 @@
 	}
       }
 
+      const getLinesGrid = (
+	angle, 
+	spacing=wState[HEX_MAGNITUDE] * Math.sin(Math.PI / 3),
+	offset=wState[VANISHING_POINT]
+      ) => {
+	const lines = []
+	const board = wState[BOARD_SIZE]
+	let head
+	if (angle % Math.PI === 0) {
+	  head = (offset.y % spacing) - spacing
+	  while (head <= board.y + spacing) {
+	    lines.push({ 
+	      start: new Vector2(0, head),
+	      end: new Vector2(board.x, head)
+	    })
+	    head += spacing
+	  }
+	  return { lines, spacing }
+	} else if (angle % Math.PI === Math.PI / 2) {
+	  head = offset.x % spacing
+	  while (head <= board.x) {
+	    lines.push({ 
+	      start: new Vector2(head, -spacing),
+	      end: new Vector2(head, board.y + spacing)
+	    })
+	    head += spacing
+	  }
+	  return { lines, spacing }
+	}
+	const slope = Math.tan(angle)
+	const yInterval = spacing / Math.cos(angle)
+	const slopeIsPositive = Math.sign(slope) > 0
+	if (slopeIsPositive) {
+	  offset = offset.y + ((board.x - offset.x) * slope)
+	} else {
+	  offset = board.y - offset.y - ((board.x - offset.x) * slope)
+	}
+	offset = offset % yInterval
+	head = (Math.sign(slope) || 1) * offset - board.x * slope + (slopeIsPositive ? -yInterval : board.y + yInterval)
+	while ((slopeIsPositive ? head <= board.y + yInterval : head >= -yInterval)) {
+	  const lowerXIntercept = (-head - yInterval) / slope
+	  const higherXIntercept = (board.y + yInterval - head) / slope
+	  const rightYIntercept = slope * board.x + head
+	  lines.push({ 
+	    start: new Vector2(
+	      Math.max(0, (slopeIsPositive ? lowerXIntercept : higherXIntercept)),
+	      (slopeIsPositive ? Math.max(-yInterval, head) : Math.min(board.y + yInterval, head))
+	    ), 
+	    end: new Vector2(
+	      Math.min((slopeIsPositive ? higherXIntercept : lowerXIntercept), board.x),
+	      (slopeIsPositive ? Math.min(board.y + yInterval, rightYIntercept) : Math.max(-yInterval, rightYIntercept))
+	    )
+	  })
+	  head += Math.sign(slope) * yInterval
+	}
+	return { lines, spacing }
+      }
+
+      const testLines = (lines) => {
+	for (let line of lines) {
+	  
+	  drawLine(
+	    GRID,
+	    line.start,
+	    line.end,
+	    wState[GRID_COLOR],
+	    wState[GRID_WIDTH]
+	  )
+	  drawCircle(
+	    line.start,
+	    7, 
+	    wState[GRID_COLOR]
+	  )
+	  drawCircle(
+	    line.end,
+	    7, 
+	    wState[GRID_COLOR]
+	  )
+	}
+      }
+
+      const getDots = (
+	lines,
+	magnitude=wState[HEX_MAGNITUDE],
+	offset=0
+      ) => {
+	const allDots = []
+	for (let line of lines.lines) {
+	  const dots = []
+	  const angle = line.end.getAngle(line.start)
+	  const unitVector = new Vector2({ angle, magnitude })
+	  let projection
+	  let head
+	  if (angle % Math.PI === Math.PI / 2) {
+	    projection = new Vector2(
+	      line.start.x, 
+	      wState[VANISHING_POINT].y
+	    )
+	  } else if (angle % Math.PI === 0) {
+	    projection = new Vector2(
+	      wState[VANISHING_POINT].x,
+	      line.start.y
+	    )
+	  } else {
+	    projection = wState[VANISHING_POINT].project(
+	      line.end.getAngle(line.start),
+	      line.start
+	    )
+	  }
+	  head = projection.copy()
+	    .add(unitVector.scale((Math.round((projection.getMagnitude(wState[VANISHING_POINT]) / lines.spacing)) % 2) / 2))
+	    .add(unitVector.scale(offset))
+
+	  if (
+	    Math.round(head.getAngle(line.start), Math.PI) 
+	    !== Math.round(angle, Math.PI)
+	  ) {
+	    head = head
+	      .add(unitVector.scale(Math.floor(
+		head.getMagnitude(line.start) / magnitude
+	      )))
+	  } else {
+	    head = head
+	      .add(unitVector.scale(-Math.ceil(
+		head.getMagnitude(line.start) / magnitude
+	      )))
+	  }
+
+	  while (head.getMagnitude(line.start) <= (line.end.getMagnitude(line.start) + magnitude * 2)) {
+	    dots.push(head)
+	    head = head.add(unitVector)
+	  }
+	  allDots.push(dots)
+	}
+	return allDots
+      }
+
+      testDots = (allDots) => {
+	for (let dots of allDots) {
+	  for (let dot of dots) {
+	    drawCircle(
+	      dot,
+	      7, 
+	      wState[GRID_COLOR]
+	    )
+	  }
+	}
+      }
+
+      newTriangleDots = (options) => {
+	const {
+	  origin=wState[VANISHING_POINT], 
+	  offset=new Vector2({
+	    magnitude: wState[HEX_MAGNITUDE], 
+	    angle: wState[HEX_ANGLE] 
+	  })
+	} = options
+	
+	const lines = getLinesGrid(offset.getAngle(), Math.sin(Math.PI / 3) * offset.getMagnitude())
+	const allDots = getDots(lines, offset.getMagnitude())
+	for (let dots of allDots) {
+	  for (let dot of dots) {
+	    drawCircle(
+	      dot,
+	      wState[GRID_WIDTH] / 2, 
+	      wState[GRID_COLOR]
+	    )
+	  }
+	}
+      }
+
+      newHex = (options) => {
+	const {
+	  origin=wState[VANISHING_POINT], 
+	  offset=new Vector2({
+	    magnitude: wState[HEX_MAGNITUDE], 
+	    angle: wState[HEX_ANGLE] 
+	  })
+	} = options
+	const lines = getLinesGrid(offset.getAngle(), Math.sin(Math.PI / 3) * offset.getMagnitude())
+	const allDots = getDots(lines, offset.getMagnitude() * 3, 2 / 3)
+	for (let i in lines.lines) {
+	  for (let dot of allDots[i]) {
+	    drawLine(
+	      GRID,
+	      dot.add(offset.scale(-1)),
+	      dot
+	    )
+	    drawLine(
+	      GRID,
+	      dot,
+	      dot.add(offset.rotate(Math.PI / 3))
+	    )
+	    drawLine(
+	      GRID,
+	      dot,
+	      dot.add(offset.rotate(-Math.PI / 3))
+	    )
+	  }
+	}
+      }
+
+      newTriangle = (options) => {
+	const {
+	  origin=wState[VANISHING_POINT], 
+	  offset=new Vector2({
+	    magnitude: wState[HEX_MAGNITUDE], 
+	    angle: wState[HEX_ANGLE] 
+	  })
+	} = options
+	const lines = getLinesGrid(offset.getAngle(), Math.sin(Math.PI / 3) * offset.getMagnitude())
+	const allDots = getDots(lines, offset.getMagnitude())
+	for (let i in lines.lines) {
+	  for (let dot of allDots[i]) {
+	    drawLine(
+	      GRID,
+	      dot.add(offset.scale(-1)),
+	      dot
+	    )
+	    drawLine(
+	      GRID,
+	      dot,
+	      dot.add(offset.rotate(Math.PI * 2 / 3))
+	    )
+	    drawLine(
+	      GRID,
+	      dot,
+	      dot.add(offset.rotate(-Math.PI * 2 / 3))
+	    )
+	  }
+	}
+      }
+
       const drawTriangleGrid = (options) => {
 	const {
 	  origin=wState[VANISHING_POINT], 
-	  offset=wState[HEX_GRID_UNIT]
+	  offset=new Vector2({
+	    magnitude: wState[HEX_MAGNITUDE], 
+	    angle: wState[HEX_ANGLE] 
+	  })
 	} = options
       
 	const headIntervals = new Vector2(
-	  offset * Math.sqrt(3),
-	  offset
+	  offset.getMagnitude() * Math.sqrt(3),
+	  offset.getMagnitude()
 	)
 	let head = new Vector2(
 	  (origin.x % headIntervals.x) - headIntervals.x,
@@ -2081,26 +2372,26 @@
 	setWhiteboardState(BRUSHES, wState[BRUSHES])
       }
 
-      const drawGrid = (type, units) => {
+      const drawGrid = (type, offset) => {
 	if (type.x === 0) {
 	  return
 	}
 	const getCoefficient = (pixels, factor) => Math.pow(10, 1 - Math.floor(Math.log10(pixels / factor)))
 	if (storedFunctions.length > 0) {
 	  for (let storedFunction of storedFunctions) {
-	    plotFunction(storedFunction.f, storedFunction.style, units, true)
+	    plotFunction(storedFunction.f, storedFunction.style, offset, true)
 	  }
 	}
 	return [
 	  [
-	    drawSquareDotsGrid,
+	    drawRectangularDotsGrid,
 	    drawLinedGrid,
-	    drawSquareGrid,
+	    drawRectangularGrid,
 	  ],
 	  [
-	    drawTriangleDotsGrid,
-	    drawHexGrid,
-	    drawTriangleGrid
+	    newTriangleDots, // drawTriangleDotsGrid,
+	    newHex, // drawHexGrid,
+	    newTriangle, // drawTriangleGrid
 	  ],
 	  [
 	    drawCalendar,
@@ -2111,12 +2402,15 @@
 	  {
 	    origin: wState[VANISHING_POINT],
 	    offset: new Vector2(
-	      units.square.x * getCoefficient(units.square.x, 3), 
-	      units.square.y * getCoefficient(units.square.y, 3)
+	      offset.rectangular.x * getCoefficient(offset.rectangular.x, 3), 
+	      offset.rectangular.y * getCoefficient(offset.rectangular.y, 3)
 	    )},
 	  { 
 	    origin: wState[VANISHING_POINT],
-	    offset: units.hex * getCoefficient(units.hex, 4)
+	    offset: new Vector2 ({
+	      magnitude: offset.hex.magnitude * getCoefficient(offset.hex.magnitude, 4),
+	      angle: offset.hex.angle
+	    })
 	  },
 	  {
 	    origin: new Vector2(
@@ -2140,8 +2434,11 @@
 	    setWhiteboardState(GRID_TYPE)
 	  } else {
 	    drawGrid(type, {
-	      square: wState[SQUARE_GRID_UNITS],
-	      hex: wState[HEX_GRID_UNIT],
+	      rectangular: wState[RECTANGULAR_OFFSET],
+	      hex: { 
+		magnitude: wState[HEX_MAGNITUDE],
+		angle: wState[HEX_ANGLE]
+	      },
 	      time: [
 		// getCalendarCell(),
 		new Vector2(
@@ -2156,7 +2453,7 @@
 		  (wState[BOARD_SIZE].x - wState[TIME_PADDING].x * 3) / 7,
 		  (wState[BOARD_SIZE].y - wState[TIME_PADDING].y) / 24,
 		)
-		// wState[HEX_GRID_UNIT]
+		// wState[HEX_MAGNITUDE]
 	      ][type.y]
 	    })
 	    wState[GRID_TYPE].setCoordinates(type)
@@ -2170,11 +2467,24 @@
 	}
       }
       
-      const setSquareGridUnits = (xUnit=wState[SQUARE_GRID_UNITS].getDistance() / Math.sqrt(2), yUnit) => {
+      const setRectangularOffset = (xOffset=wState[RECTANGULAR_OFFSET].getMagnitude() / Math.sqrt(2), yOffset) => {
 	setWhiteboardState(
-	  SQUARE_GRID_UNITS,
-	  new Vector2(xUnit, yUnit || xUnit)
+	  RECTANGULAR_OFFSET,
+	  new Vector2(xOffset, yOffset || xOffset)
 	)
+	setGrid()
+      }
+      
+      const setHexagonalOffset = (
+	angle=Math.round(wState[HEX_ANGLE] * 6 / Math.PI) * Math.PI / 6,
+	magnitude=wState[HEX_MAGNITUDE]
+      ) => {
+	if (typeof angle === 'object') {
+	  magnitude = angle.getMagnitude()
+	  angle = angle.getAngle()
+	}
+	setWhiteboardState(HEX_ANGLE, angle)
+	setWhiteboardState(HEX_MAGNITUDE, magnitude)
 	setGrid()
       }
 
@@ -2198,9 +2508,12 @@
       const plotFunction = (
 	cb, 
 	brush=wState[BRUSHES][wState[BRUSH]], 
-	units={
-	  square: wState[SQUARE_GRID_UNITS],
-	  hex: wState[HEX_GRID_UNIT]
+	offset={
+	  rectangular: wState[RECTANGULAR_OFFSET],
+	  hex: { 
+	    magnitude: wState[HEX_MAGNITUDE],
+	    angle: wState[HEX_ANGLE]
+	  }
 	},
 	fromStoredFunctions=false
       ) => {
@@ -2213,24 +2526,24 @@
 	case 1:
 	  let nextPlotHeadX
 	  plotHeadLocation = new Vector2(
-	    - wState[VANISHING_POINT].x / units.square.x,
-	    cb(wState[VANISHING_POINT].x / units.square.x)
+	    - wState[VANISHING_POINT].x / offset.rectangular.x,
+	    cb(wState[VANISHING_POINT].x / offset.rectangular.x)
 	  )
 	  previousPlotHeadLocation = plotHeadLocation.copy()
-	  while (plotHeadLocation.x <= wState[BOARD_SIZE].add(wState[VANISHING_POINT].scale(-1)).getSquareUnits().x) {
+	  while (plotHeadLocation.x <= wState[BOARD_SIZE].add(wState[VANISHING_POINT].scale(-1)).getRectangularOffset().x) {
 	    drawLine(
 	      GRID,
 	      previousPlotHeadLocation
-		.scale({ x: units.square.x, y: -units.square.y })
+		.scale({ x: offset.rectangular.x, y: -offset.rectangular.y })
 		.add(wState[VANISHING_POINT]),
 	      plotHeadLocation
-		.scale({ x: units.square.x, y: -units.square.y })
+		.scale({ x: offset.rectangular.x, y: -offset.rectangular.y })
 		.add(wState[VANISHING_POINT]),
 	      brush.color,
 	      brush.width
 	    )
 	    previousPlotHeadLocation.setCoordinates(plotHeadLocation)
-	    nextPlotHeadX = plotHeadLocation.x + (1 / units.square.x)
+	    nextPlotHeadX = plotHeadLocation.x + (1 / offset.rectangular.x)
 	    plotHeadLocation.setCoordinates({ 
 	      x: nextPlotHeadX,
 	      y: cb(nextPlotHeadX)
@@ -2248,10 +2561,10 @@
 	      drawLine(
 		GRID,
 		previousPlotHeadLocation
-		  .scale({ x: units.hex, y: -units.hex })
+		  .scale({ x: offset.hex, y: -offset.hex })
 		  .add(wState[VANISHING_POINT]),
 		plotHeadLocation
-		  .scale({ x: units.hex, y: -units.hex })
+		  .scale({ x: offset.hex, y: -offset.hex })
 		  .add(wState[VANISHING_POINT]),
 		brush.color,
 		brush.width
@@ -2325,7 +2638,7 @@
       }
 
       const constrainArc = (a, b, c) => {
-	const scale = a.getDistance(b)/a.getDistance(c)
+	const scale = a.getMagnitude(b)/a.getMagnitude(c)
 	return new Vector2(
 	  (c.x - a.x) * scale + a.x,
  	  (c.y - a.y) * scale + a.y
@@ -2835,7 +3148,7 @@
       wState[GRID_COLOR] = new Color(wState[GRID_COLOR])
       wState[GRID_TYPE] = new Vector2(wState[GRID_TYPE])
       wState[TIME_PADDING] = new Vector2(wState[TIME_PADDING])
-      wState[CALENDAR_OFFSET] = wState[SQUARE_GRID_UNITS] = new Vector2(wState[SQUARE_GRID_UNITS])
+      wState[CALENDAR_OFFSET] = wState[RECTANGULAR_OFFSET] = new Vector2(wState[RECTANGULAR_OFFSET])
       wState[PLANNER_OFFSET] = new Vector2(
 	(wState[BOARD_SIZE].x - wState[TIME_PADDING].x * 2) / 7,
 	(wState[BOARD_SIZE].y - wState[TIME_PADDING].y) / 48
