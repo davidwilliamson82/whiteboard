@@ -516,12 +516,6 @@
 	  layers[layer].setAttribute('viewBox', `0 0 ${state[BOARD_SIZE].x} ${state[BOARD_SIZE].y}`)
 	  layers[layer].setAttribute('xmlns', svgNameSpace)
 	}
-	setImage(PROBLEM, state[PROBLEM_IMAGE], { margin: '2rem'})
-	if (query[PROBLEM_ACTIVE]) {
-	  dom[PROBLEM].style.display = 'initial'
-	} else {
-	  dom[PROBLEM].style.display = 'none'
-	}
 	
 	// initialize planner headers
 	Object.assign(daysElement.style, {
@@ -751,7 +745,6 @@
       const GRID_COLOR = 'GRID_COLOR'
       const GRID_WIDTH = 'GRID_WIDTH'
       const PROBLEM_IMAGE = 'PROBLEM_IMAGE' // String
-      const PROBLEM_ACTIVE = 'PROBLEM_ACTIVE' // Boolean
       const VANISHING_POINT = 'VANISHING_POINT' // Vector2 *
       const TOOL = 'TOOL' // String, not stored
       const TOOLS_COLOR = 'TOOLS_COLOR'
@@ -1610,8 +1603,6 @@
       defaultState[GRID_WIDTH] = 2
       defaultState[GRID_COLOR] = new Color('rgba(0, 0, 0, 0.4)')
       defaultState[TIME_PADDING] = new Vector2(80, 40)
-      defaultState[PROBLEM_IMAGE] = 'problem.png'
-      defaultState[PROBLEM_ACTIVE] = false
       defaultState[TOOL] = PAINT_BRUSH
       defaultState[TOOLS_COLOR] = new Color('rgba(128, 128, 128, 0.6)')
       defaultState[BRUSH] = 0
@@ -3415,9 +3406,8 @@
       query[MARKS_IMAGE] && setImage(MARKS, query[MARKS_IMAGE])      
       console.log(`Wallpaper Image: ${wState[WALLPAPER_IMAGE]}`)
       if (query[PROBLEM_IMAGE]) {
-	const problemImg = document.createElement('img')
-	problemImg.src = query[PROBLEM_IMAGE]
-	  dom[PROBLEM].appendChild(problemImg)	
+	setImage(PROBLEM, query[PROBLEM_IMAGE], { margin: '2rem'})
+	dom[PROBLEM].style.display = 'initial'
       }
       if (wState[TOOL] === TEXT) {
 	drawTextCursor()
