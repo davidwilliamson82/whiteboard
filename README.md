@@ -59,7 +59,6 @@ QUERY PARAMETERS: <br />
 &nbsp;&nbsp;wallpaper-image<br />
 &nbsp;&nbsp;overlay-color<br />
 &nbsp;&nbsp;grid-type (two numbers, between 0 and 2, separated by 'x')<br />
-&nbsp;&nbsp;problem-active<br />
 &nbsp;&nbsp;problem-image<br />
 &nbsp;&nbsp;marks-data<br />
 &nbsp;&nbsp;fill-active<br />
