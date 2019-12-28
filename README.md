@@ -20,6 +20,7 @@ TOOLS: <br />
 &nbsp;&nbsp;S - selection tool<br />
 <br />
 OTHER CONTROLS: <br />
+&nbsp;&nbsp;H - instructions<br />
 &nbsp;&nbsp;backtick, 0 - 9: select brushes, hold to set colors.<br />
 &nbsp;&nbsp;&nbsp;&nbsp;the color palettes are arranged as follows:<br />
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Left - paintbrush color<br />
