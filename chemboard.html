@@ -673,10 +673,14 @@
 	}
       }
 
-      const clearLayer = (input) => {
+      const clearLayer = (input, removeMeasurement) => {
 	const layer = typeof input === 'string' ?  layers[input] : input
 	if (layer.nodeName === 'svg') {
+	  let measured = document.getElementById('measurement')
 	  layer.innerHTML = ''
+	  if (input === TOOLS && !removeMeasurement && measured) {
+	    layers[TOOLS].appendChild(measured)
+	  }
 	} else if (layer.nodeName !== 'DIV') {
 	  layer.clearRect(
 	    0, 
@@ -717,6 +721,7 @@
       const BOX_ERASER = 'BOX_ERASER' // x
       const MEASURE = 'MEASURE' // m
       const PALETTE = 'PALETTE' // `, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 (held)
+      const SELECT = 'SELECT'
       
       const WALLPAPER = 'WALLPAPER'
       const OVERLAY = 'OVERLAY'
@@ -768,7 +773,6 @@
       const FUNCTIONS = 'FUNCTIONS' // temporary array
       const MARKS_DATA = 'MARKS_DATA' // String
       const SAVED_MARKS_DATA = 'SAVED_MARKS_DATA' // Object: { <name>: <dataURI> }
-      const SAVE_PROMPT_ACTIVE = 'SAVE_PROMPT_ACTIVE' // Boolean
       const MARKS_HISTORY_LENGTH = 'MARKS_HISTORY_LENGTH'
 
       const NONE = 'NONE'
@@ -964,6 +968,7 @@
 
       tools[ELLIPSE] = {
 	mouseDown: (toolLocation) => {
+	  clearLayer(TOOLS)
 	  const horizontal = (toolLocation.x - wState[MOUSE_DOWN_LOCATION].x) / 2
 	  const vertical = (toolLocation.y - wState[MOUSE_DOWN_LOCATION].y) / 2  
 	  const ellipse = document.createElementNS(svgNameSpace, 'ellipse')
@@ -975,24 +980,26 @@
 	  ellipse.setAttribute('cy', wState[MOUSE_DOWN_LOCATION].y + vertical)
 	  ellipse.setAttribute('rx', Math.abs(horizontal))
 	  ellipse.setAttribute('ry', Math.abs(vertical))
-	  layers[TOOLS].appendChild(ellipse)    
+	  layers[TOOLS].appendChild(ellipse)
 	},
-	mouseMove: (toolLocation) => {  
-	  if (mouseIsDown && constraints[constraint](toolLocation)) {
+	mouseMove: (toolLocation) => {
+	  if (mouseIsDown && constraints[constraint](toolLocation) && ellipse) {
+	    const ellipse = document.getElementById('ellipse')
+	    clearLayer(TOOLS)
 	    const horizontal = (constraints[constraint](toolLocation).x - wState[MOUSE_DOWN_LOCATION].x) / 2
 	    const vertical = (constraints[constraint](toolLocation).y - wState[MOUSE_DOWN_LOCATION].y) / 2  
-	    const ellipse = layers[TOOLS].childNodes[0]
 	    ellipse.setAttribute('stroke', wState[FILL_ACTIVE] || spaceIsDown ? 'none' : wState[TOOLS_COLOR].getRgba())
 	    ellipse.setAttribute('fill', wState[FILL_ACTIVE] || spaceIsDown ? wState[TOOLS_COLOR].getRgba() : 'none')
 	    ellipse.setAttribute('cx', wState[MOUSE_DOWN_LOCATION].x + horizontal)
 	    ellipse.setAttribute('cy', wState[MOUSE_DOWN_LOCATION].y + vertical)
 	    ellipse.setAttribute('rx', Math.abs(horizontal))
 	    ellipse.setAttribute('ry', Math.abs(vertical))
+	    layers[TOOLS].appendChild(ellipse)    
 	  }
 	},
 	mouseUp: (toolLocation) => {
 	  if (constraints[constraint](toolLocation)) {
-	    layers[TOOLS].innerHTML = ''
+	    clearLayer(TOOLS)
 	    const horizontal = (constraints[constraint](toolLocation).x - wState[MOUSE_DOWN_LOCATION].x) / 2
 	    const vertical = (constraints[constraint](toolLocation).y - wState[MOUSE_DOWN_LOCATION].y) / 2
 	    if (spaceIsDown) {
@@ -1024,6 +1031,7 @@
 
       tools[RECTANGLE] = {
 	mouseDown: (toolLocation) => {
+	  clearLayer(TOOLS)
 	  const rectangle = document.createElementNS(svgNameSpace, 'rect')
 	  rectangle.setAttribute('id', 'rectangle')
 	  rectangle.setAttribute('stroke', wState[FILL_ACTIVE] || spaceIsDown ? 'none' : wState[TOOLS_COLOR].getRgba())
@@ -1035,22 +1043,24 @@
 	  rectangle.setAttribute('height', Math.abs(toolLocation.y - wState[MOUSE_DOWN_LOCATION].y))
 	  layers[TOOLS].appendChild(rectangle)
 	},
-	mouseMove: (toolLocation) => {  
+	mouseMove: (toolLocation) => {
 	  if (mouseIsDown && constraints[constraint](toolLocation)) {
+	    const rectangle = document.getElementById('rectangle')
+	    clearLayer(TOOLS)
 	    const width = Math.abs(constraints[constraint](toolLocation).x - wState[MOUSE_MOVE_LOCATION].x)
 	    const height = Math.abs(constraints[constraint](toolLocation).y - wState[MOUSE_MOVE_LOCATION].y)
-	    const rectangle = layers[TOOLS].childNodes[0]
 	    rectangle.setAttribute('stroke', wState[FILL_ACTIVE] || spaceIsDown ? 'none' : wState[TOOLS_COLOR].getRgba())
 	    rectangle.setAttribute('fill', wState[FILL_ACTIVE] || spaceIsDown ? wState[TOOLS_COLOR].getRgba() : 'none')
 	    rectangle.setAttribute('x', Math.min(constraints[constraint](toolLocation).x, wState[MOUSE_DOWN_LOCATION].x))
 	    rectangle.setAttribute('y', Math.min(constraints[constraint](toolLocation).y, wState[MOUSE_DOWN_LOCATION].y))
 	    rectangle.setAttribute('width', Math.abs(constraints[constraint](toolLocation).x - wState[MOUSE_DOWN_LOCATION].x))
 	    rectangle.setAttribute('height', Math.abs(constraints[constraint](toolLocation).y - wState[MOUSE_DOWN_LOCATION].y))
+	    layers[TOOLS].appendChild(rectangle)
 	  }
 	},
 	mouseUp: (toolLocation) => {
 	  if (constraints[constraint](toolLocation)) {
-	    layers[TOOLS].innerHTML = ''
+	    clearLayer(TOOLS)
 	    const rectangle = [
 	      Math.min(constraints[constraint](toolLocation).x, wState[MOUSE_DOWN_LOCATION].x), 
 	      Math.min(constraints[constraint](toolLocation).y, wState[MOUSE_DOWN_LOCATION].y), 
@@ -1068,8 +1078,10 @@
 	  updateMarksHistory()
 	}
       }
+
       tools[LINE] = {
 	mouseDown: (toolLocation) => {
+	  clearLayer(TOOLS)
 	  if (wState[FILL_ACTIVE]) {
 	    drawArrow(
 	      TOOLS,
@@ -1090,7 +1102,7 @@
 	},
 	mouseMove: (toolLocation) => {
 	  if (mouseIsDown && constraints[constraint](toolLocation)) {
-	    layers[TOOLS].innerHTML = ''
+	    clearLayer(TOOLS)
 	    if (wState[FILL_ACTIVE]) {
 	      drawArrow(
 		TOOLS,
@@ -1112,7 +1124,7 @@
 	},
 	mouseUp: (toolLocation) => {
 	  if (constraints[constraint](toolLocation)) {
-	    layers[TOOLS].innerHTML = ''
+	    clearLayer(TOOLS)
 	    if (wState[FILL_ACTIVE]) {
 	      drawArrow(
 		MARKS,
@@ -1146,35 +1158,40 @@
       
       tools[MEASURE] = {
 	mouseDown: (toolLocation) => {
-	  drawLine(
-	    TOOLS,
-	    wState[MOUSE_DOWN_LOCATION],
-	    new Vector2(toolLocation.x, toolLocation.y),
-	    wState[TOOLS_COLOR],
-	    6
-	  )
+	  const measurementElement = document.createElementNS(svgNameSpace, 'line')
+	  measurementElement.setAttribute('id', 'measurement')
+	  measurementElement.setAttribute('x1', wState[MOUSE_DOWN_LOCATION].x.toString())
+	  measurementElement.setAttribute('y1', wState[MOUSE_DOWN_LOCATION].y.toString())
+	  measurementElement.setAttribute('x2', toolLocation.x.toString())
+	  measurementElement.setAttribute('y2', toolLocation.y.toString())
+	  measurementElement.setAttribute('stroke', wState[TOOLS_COLOR].getRgba())
+	  measurementElement.setAttribute('stroke-width', '6px')
+	  layers[TOOLS].appendChild(measurementElement)
 	},
 	mouseMove: (toolLocation) => {
-	  layers[TOOLS].innerHTML = ''
+	  clearLayer(TOOLS, true)
 	  if (wState[GRID_TYPE].x === 3 && wState[GRID_TYPE].y === 2) {
 	    const center = getCenter()
 	    const radius = wState[MOUSE_DOWN_LOCATION].getMagnitude(center)
 	    const end = constrainArc(center, wState[MOUSE_DOWN_LOCATION], toolLocation)
-	    const path = document.createElementNS(svgNameSpace, 'path')
+	    const measurementElement = document.createElementNS(svgNameSpace, 'path')
 	    const bigArc = (toolLocation.getAngle(center) - wState[MOUSE_DOWN_LOCATION].getAngle(center) + (Math.PI * 2)) % (Math.PI * 2) > Math.PI ? 1 : 0
-	    path.setAttribute('fill', 'none')
-	    path.setAttribute('d', `M${wState[MOUSE_DOWN_LOCATION].x},${wState[MOUSE_DOWN_LOCATION].y} A ${radius} ${radius} 0 ${bigArc} 1 ${end.x} ${end.y}`)
-	    path.setAttribute('stroke', wState[TOOLS_COLOR].getRgba())
-	    path.setAttribute('stroke-width', '6px')
-	    layers[TOOLS].appendChild(path)
+	    measurementElement.setAttribute('id', 'measurement')
+	    measurementElement.setAttribute('fill', 'none')
+	    measurementElement.setAttribute('d', `M${wState[MOUSE_DOWN_LOCATION].x},${wState[MOUSE_DOWN_LOCATION].y} A ${radius} ${radius} 0 ${bigArc} 1 ${end.x} ${end.y}`)
+	    measurementElement.setAttribute('stroke', wState[TOOLS_COLOR].getRgba())
+	    measurementElement.setAttribute('stroke-width', '6px')
+	    layers[TOOLS].appendChild(measurementElement)
 	  } else {
-	    drawLine(
-	      TOOLS,
-	      wState[MOUSE_DOWN_LOCATION],
-	      new Vector2(toolLocation.x, toolLocation.y),
-	      wState[TOOLS_COLOR],
-	      6
-	    )
+	    const measurementElement = document.createElementNS(svgNameSpace, 'line')
+	    measurementElement.setAttribute('id', 'measurement')
+	    measurementElement.setAttribute('x1', wState[MOUSE_DOWN_LOCATION].x.toString())
+	    measurementElement.setAttribute('y1', wState[MOUSE_DOWN_LOCATION].y.toString())
+	    measurementElement.setAttribute('x2', toolLocation.x.toString())
+	    measurementElement.setAttribute('y2', toolLocation.y.toString())
+	    measurementElement.setAttribute('stroke', wState[TOOLS_COLOR].getRgba())
+	    measurementElement.setAttribute('stroke-width', '6px')
+	    layers[TOOLS].appendChild(measurementElement)
 	  }
 
 	},
@@ -1225,6 +1242,49 @@
 	    wState[MOUSE_UP_LOCATION].x - wState[MOUSE_DOWN_LOCATION].x,
 	    wState[MOUSE_UP_LOCATION].y - wState[MOUSE_DOWN_LOCATION].y
 	  ))
+	}
+      }
+
+      tools[SELECT] = {
+	mouseDown: (toolLocation) => {
+	  clearLayer(TOOLS)
+	  const selection = document.createElementNS(svgNameSpace, 'rect')
+	  selection.setAttribute('id', 'selection')
+	  selection.setAttribute('stroke', wState[TOOLS_COLOR].getRgba())
+	  selection.setAttribute('stroke-dasharray', '5,5')
+	  selection.setAttribute('fill', 'none')
+	  selection.setAttribute('stroke-width', 1)
+	  selection.setAttribute('x', Math.min(toolLocation.x, wState[MOUSE_DOWN_LOCATION].x))
+	  selection.setAttribute('y', Math.min(toolLocation.y, wState[MOUSE_DOWN_LOCATION].y))
+	  selection.setAttribute('width', Math.abs(toolLocation.x - wState[MOUSE_DOWN_LOCATION].x))
+	  selection.setAttribute('height', Math.abs(toolLocation.y - wState[MOUSE_DOWN_LOCATION].y))
+	  layers[TOOLS].appendChild(selection)
+	},
+	mouseMove: (toolLocation) => {  
+	  if (mouseIsDown && constraints[constraint](toolLocation)) {
+	    const selection = document.getElementById('selection')
+	    clearLayer(TOOLS)
+	    const width = Math.abs(constraints[constraint](toolLocation).x - wState[MOUSE_MOVE_LOCATION].x)
+	    const height = Math.abs(constraints[constraint](toolLocation).y - wState[MOUSE_MOVE_LOCATION].y)
+	    selection.setAttribute('stroke', wState[TOOLS_COLOR].getRgba())
+	    selection.setAttribute('stroke-dasharray', '5,5')
+	    selection.setAttribute('fill', 'none')
+	    selection.setAttribute('x', Math.min(constraints[constraint](toolLocation).x, wState[MOUSE_DOWN_LOCATION].x))
+	    selection.setAttribute('y', Math.min(constraints[constraint](toolLocation).y, wState[MOUSE_DOWN_LOCATION].y))
+	    selection.setAttribute('width', Math.abs(constraints[constraint](toolLocation).x - wState[MOUSE_DOWN_LOCATION].x))
+	    selection.setAttribute('height', Math.abs(constraints[constraint](toolLocation).y - wState[MOUSE_DOWN_LOCATION].y))
+	    layers[TOOLS].appendChild(selection)
+	  }
+	},
+	mouseUp: (toolLocation) => {
+	  if (constraints[constraint](toolLocation)) {
+	    selectBox = {
+	      x: Math.min(constraints[constraint](toolLocation).x, wState[MOUSE_DOWN_LOCATION].x),
+	      y: Math.min(constraints[constraint](toolLocation).y, wState[MOUSE_DOWN_LOCATION].y),
+	      width: Math.abs(constraints[constraint](toolLocation).x - wState[MOUSE_DOWN_LOCATION].x),
+	      height: Math.abs(constraints[constraint](toolLocation).y - wState[MOUSE_DOWN_LOCATION].y)
+	    }
+	  }
 	}
       }
 
@@ -1574,7 +1634,6 @@
       defaultState[MEASUREMENT] = globalOrigin.copy()
       defaultState[MARKS_DATA] = 'untitled'
       defaultState[SAVED_MARKS_DATA] = {}
-      defaultState[SAVE_PROMPT_ACTIVE] = true
       defaultState[MARKS_HISTORY_LENGTH] = 50
 
       const updateMarksHistory = (dataURL=dom[MARKS].toDataURL('image/png')) => {
@@ -1639,7 +1698,6 @@
 	  layers[layer].fill()
 	  layers[layer].fillStyle = wState[BRUSHES][wState[BRUSH]].color.getRgba()
 	}
-	console.log('color: ', color)
 	drawLine(layer, fv, base, color, width)
       }
 
@@ -2438,8 +2496,8 @@
 	switch (layer) {
 	case dom[OVERLAY]:
 	  dom[OVERLAY].style.background = color.getRgba()
-	
 	  setWhiteboardState(OVERLAY_COLOR, color)
+	  setWhiteboardState(TOOLS_COLOR, new Color(`hsla(0, 0%, ${100 * (1 - Math.round(color.lum))}%, 0.5)`))
 	  drawColorWheel(color, new Vector2(colorWheelSideLength, 0))
 	  break
 	case layers[GRID]:
@@ -2748,24 +2806,22 @@
 
       dom[SENSOR].addEventListener('mousedown', (e) => {
 	mouseIsDown = true
-	const mouseLocation = new Vector2(e.offsetX, e.offsetY)
-	wState[MOUSE_DOWN_LOCATION].setCoordinates(mouseLocation)
+	wState[MOUSE_DOWN_LOCATION].setCoordinates(currentMouseLocation)
 	setWhiteboardState(MOUSE_DOWN_LOCATION, wState[MOUSE_DOWN_LOCATION])
-	wState[PRINT_HEAD_LOCATION].setCoordinates(mouseLocation)
-	tools[wState[TOOL]].mouseDown(mouseLocation)
+	wState[PRINT_HEAD_LOCATION].setCoordinates(currentMouseLocation)
+	tools[wState[TOOL]].mouseDown(currentMouseLocation)
       })
       dom[SENSOR].addEventListener('mousemove', (e) => {
-	const mouseLocation = new Vector2(e.offsetX, e.offsetY)
-	wState[MOUSE_MOVE_LOCATION].setCoordinates(mouseLocation)
+	currentMouseLocation.setCoordinates(e.offsetX, e.offsetY)
+	wState[MOUSE_MOVE_LOCATION].setCoordinates(currentMouseLocation)
 	if (mouseIsDown) {
-	  tools[wState[TOOL]].mouseMove(mouseLocation)
+	  tools[wState[TOOL]].mouseMove(currentMouseLocation)
 	}
       })
       dom[SENSOR].addEventListener('mouseup', (e) => {
-	const mouseLocation = new Vector2(e.offsetX, e.offsetY)
 	mouseIsDown = false
-	wState[MOUSE_UP_LOCATION].setCoordinates(mouseLocation)
-	tools[wState[TOOL]].mouseUp(mouseLocation)
+	wState[MOUSE_UP_LOCATION].setCoordinates(currentMouseLocation)
+	tools[wState[TOOL]].mouseUp(currentMouseLocation)
       })
 
       document.body.addEventListener("touchstart", function (e) {
@@ -2815,8 +2871,16 @@
       })
 
       dom[SENSOR].addEventListener('contextmenu', (e) => {
+	e.preventDefault()
 	isDrawing = false
 	mouseIsDown = false
+	const name = prompt('Please name this data', wState[MARKS_DATA])
+	clearLayer(TOOLS)
+	if (name !== null) {
+	  wState[SAVED_MARKS_DATA][name] = dom[MARKS].toDataURL('image/png')
+	  setWhiteboardState(SAVED_MARKS_DATA, wState[SAVED_MARKS_DATA])
+	  console.log(`Saved ${name}`)
+	}
       })
 
       window.addEventListener('scroll', (e) => {
@@ -2843,7 +2907,6 @@
 	    if (!isTyping) {
 	      lastTool = wState[TOOL]
 	      setWhiteboardState(TOOL, TEXT)
-	    
 	      isTyping = true
 	      drawTextCursor()
 	    }
@@ -2868,18 +2931,9 @@
 	  case 's':
 	  case 'S':
 	    if (!isTyping) {
-	      let name
-	      if (wState[SAVE_PROMPT_ACTIVE]) {
-		name = prompt('Please name this data', wState[MARKS_DATA])
-	      } else {
-		name = wState[MARKS_DATA]
-	      }
-	      if (name !== null) {
-		wState[SAVED_MARKS_DATA][name] = dom[MARKS].toDataURL('image/png')
-		setWhiteboardState(SAVED_MARKS_DATA, wState[SAVED_MARKS_DATA])
-		console.log(`Saved ${name}`)
-	      }
-	      dom[MARKS].style.zIndex = "10";
+	      clearLayer(TOOLS)
+	      setWhiteboardState(TOOL, SELECT)
+	      lastTool = SELECT
 	    }
 	    break
 	  case '.':
@@ -3045,6 +3099,7 @@
 	case 'p':
 	case 'P':
 	  if (!isTyping) {
+	    clearLayer(TOOLS)
 	    setWhiteboardState(TOOL, PAINT_BRUSH)
 	    lastTool = PAINT_BRUSH
 	  }
@@ -3052,6 +3107,7 @@
 	case 'r':
 	case 'R':
 	  if (!isTyping) {
+	    clearLayer(TOOLS)
 	    setWhiteboardState(TOOL, RECTANGLE)
 	    lastTool = RECTANGLE
 	  }
@@ -3059,6 +3115,7 @@
 	case 'e':
 	case 'E':
 	  if (!isTyping) {
+	    clearLayer(TOOLS)
 	    setWhiteboardState(TOOL, ELLIPSE)
 	    lastTool = ELLIPSE
 	  }
@@ -3066,6 +3123,7 @@
 	case 'l':
 	case 'L':
 	  if (!isTyping) {
+	    clearLayer(TOOLS)
 	    setWhiteboardState(TOOL, LINE)
 	    lastTool = LINE
 	  }
@@ -3073,6 +3131,7 @@
 	case 'm':
 	case 'M':
 	  if (!isTyping) {
+	    clearLayer(TOOLS)
 	    setWhiteboardState(TOOL, MEASURE)
 	    lastTool = MEASURE
 	  }
@@ -3100,7 +3159,7 @@
 	  } else {
 	    wState[TOOL] = defaultState[TOOL]
 	  }
-	  clearLayer(TOOLS)
+	  clearLayer(TOOLS, true)
 	  break
 	case 'Backspace':
 	  if (!isTyping) {
@@ -3172,17 +3231,71 @@
 	    shiftIsDown = false
 	  }
 	  break
-	case 's':
-	case 'S':
-	  if (!isTyping) {
-	    dom[MARKS].style.zIndex = "6";
-	  }
-	  break
 	case 'z':
 	case 'Z':
 	  if (!isTyping && controlIsDown && historyIndex > 0) {
 	    historyIndex -= 1
 	    setImage(MARKS, marksHistory[historyIndex])
+	  }
+	  break
+	case 'x':
+	case 'X':
+	  if (!isTyping && controlIsDown) {
+	    clearLayer(TOOLS)
+	    clipboard = layers[MARKS].getImageData(
+	      selectBox.x, 
+	      selectBox.y,
+	      selectBox.width,
+	      selectBox.height
+	    )
+	    layers[MARKS].clearRect(
+	      selectBox.x, 
+	      selectBox.y,
+	      selectBox.width,
+	      selectBox.height
+	    )
+	    updateMarksHistory()
+	  }
+	  break
+	case 'c':
+	case 'C':
+	  if (!isTyping && controlIsDown) {
+	    clearLayer(TOOLS)
+	    clipboard = layers[MARKS].getImageData(
+	      selectBox.x,
+	      selectBox.y,
+	      selectBox.width,
+	      selectBox.height
+	    )
+	  }
+	  break
+	case 'v':
+	case 'V':
+	  if (!isTyping && controlIsDown) {
+	    const originalMarks = layers[MARKS].getImageData(
+	      currentMouseLocation.x, 
+	      currentMouseLocation.y, 
+	      clipboard.width, 
+	      clipboard.height
+	    )
+	    let newImageData = []
+	    for (let i = 0; i < clipboard.data.length; i += 4) {
+	      let rOld = originalMarks.data[i]
+	      let rNew = clipboard.data[i]
+	      let gOld = originalMarks.data[i + 1]
+	      let gNew = clipboard.data[i + 1]
+	      let bOld = originalMarks.data[i + 2]
+	      let bNew = clipboard.data[i + 2]
+	      let aOld = originalMarks.data[i + 3]
+	      let aNew = clipboard.data[i + 3]
+	      newImageData.push(Math.min(255, rNew * (aNew / 255) + rOld * (aOld / 255) * (1 - (aNew / 255))))
+	      newImageData.push(Math.min(255, gNew * (aNew / 255) + gOld * (aOld / 255) * (1 - (aNew / 255))))
+	      newImageData.push(Math.min(255, bNew * (aNew / 255) + bOld * (aOld / 255) * (1 - (aNew / 255))))
+	      newImageData.push(Math.min(255, aOld + aNew))
+	    }
+	    const newClipboard = new ImageData(Uint8ClampedArray.from(newImageData), clipboard.width, clipboard.height)
+	    layers[MARKS].putImageData(newClipboard, currentMouseLocation.x, currentMouseLocation.y)
+	    updateMarksHistory()
 	  }
 	  break
 	case 'y':
@@ -3208,14 +3321,16 @@
       let isCopying = false
       let isPickingColor = false
       let clipboard
+      let selectBox = globalOrigin.copy()
+      let measurementElement
       let isDrawingRectangle = false
       let isDrawingLine = false
       let isTyping = false
       let constraint = NONE
       let storedFunctions = []
-      let marksHistory = [dom[MARKS].toDataURL('image/png')]
       let historyIndex = 0
-      let currentMouse
+      let currentMouseLocation = globalOrigin.copy()
+      let marksHistory
 
       const query = parseQueryString(window.location.href)
       const wState = {}
@@ -3270,9 +3385,6 @@
 	brush.color = new Color(brush.color)
       })
       wState[TOOLS_COLOR] = new Color(wState[TOOLS_COLOR])
-      wState[SAVE_PROMPT_ACTIVE] = query.hasOwnProperty(SAVE_PROMPT_ACTIVE)
-	? query[SAVE_PROMPT_ACTIVE] 
-	: defaultState[SAVE_PROMPT_ACTIVE]
       let lastTool 
       if (wState[TOOL] === PALETTE
 	|| wState[TOOL] === GRID
@@ -3307,7 +3419,10 @@
 	isTyping = true
       }
       if (wState[SAVED_MARKS_DATA][query[MARKS_DATA]]) {
+	marksHistory = [wState[SAVED_MARKS_DATA][query[MARKS_DATA]]]
 	setImage(MARKS, wState[SAVED_MARKS_DATA][query[MARKS_DATA]])
+      } else {
+	marksHistory = [dom[MARKS].toDataURL('image/png')]
       }
     </script>
     <script src="chemistry.js"></script>
