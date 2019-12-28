@@ -780,6 +780,7 @@
       const HORIZONTAL = 'HORIZONTAL'
       const VERTICAL = 'VERTICAL'
       const PARALLEL = 'PARALLEL'
+      const PERPENDICULAR = 'PERPENDICULAR'
       const DOZENAL = 'DOZENAL'
       const VERTICAL_HORIZONTAL  = 'VERTICAL_HORIZONTAL '
       const HEXAGONAL = 'HEXAGONAL'
@@ -818,6 +819,14 @@
 	wState[MOUSE_DOWN_LOCATION].add(new Vector2(
 	  Math.cos(wState[ANGLE]), 
 	  Math.sin(wState[ANGLE])
+	)),
+	wState[MOUSE_DOWN_LOCATION],
+	toolLocation
+      )
+      constraints[PERPENDICULAR] = (toolLocation) => constrainLine(
+	wState[MOUSE_DOWN_LOCATION].add(new Vector2(
+	  Math.sin(wState[ANGLE]), 
+	  -Math.cos(wState[ANGLE])
 	)),
 	wState[MOUSE_DOWN_LOCATION],
 	toolLocation
@@ -2894,14 +2903,12 @@
 	}
 	if (!keyIsDown) {
 	  switch (event.key) {
-	    /* case 'h':
+	    case 'h':
 	       if (!isTyping) {
-	       alert('CONTROLS:\n\nShift: bold\nSpacebar: eraser\nz: box-eraser\nEscape: clear screen\ni: copy input\no: paste output\n\nCOLORS:\nr, g, b: red, green, blue\nc, m, y, k: cyan, magenta, yellow, black\nw: white\nf: color picker\n\nPEN SIZE:\n=: increase line-width\n-: decrease line-width\n\n')
-	       alert('IMAGE:\np: reset image\n\nBACKGROUND OPACITY:\n`: clear background\n1 - 9: 0.1 - 0.9 opacity\n0: full opacity\n\nGRIDS:\nt: triangle grid\ns: square grid\nx: hexagonal grid\nd: square dots grid\n;: lined grid\n\nGRID COLOR:\nj: toggle white/black\nn: cycle through colors\n\nSLIDESHOW:\n(set theme to slideshow)\n.: forward one slide\n,: back one slide')
-	       alert('CONSTRAINTS:\nUp: constrain to vertical line\nLeft: constrain to horizontal line\n/: constrain to parallel to line\nDown: constrain to vanishing point line\nRight: constrain to arc about vanishing point\nv: set vanishing point to mouse position\n\nTEXT:\na: enter text-mode\nesc: exit text-mode\n\nSHAPES\nq: draw rectangle\nl: draw line\ne: draw ellipse')
-	       alert(`QUERY PARAMETERS: \ntitle: ${document.title}\ntheme: ${initialTheme}\nimage: ${imageURL}\nscreen: ${wState[SCREEN_SIZE].x} x ${wState[SCREEN_SIZE].y}\npens: ${query.pens || 'none'}\npenColor: ${pen.strokeStyle}\npenWidth: ${pen.lineWidth}\ngridColor: ${grid.strokeStyle}\ngridWidth: ${grid.lineWidth}\nbackgroundOpacity: ${currentBackgroundOpacity}\nbackground: ${background.fillStyle}\ncells: ${cells}\nzoom: ${zoom}\ngridtype: ${gridType}\neraseRadius: ${wState[ERASE_RADIUS]}`)
+		 alert('TOOLS:\n  P - paintbrush\n  R - rectangle\n  E - ellipse\n  L - line\n  T - text\n  M - measure\n  S - select\n\nOTHER CONTROLS:\n  Backtick, 0 - 9: choose brush, hold to set color\n    the color palettes are arranged as follows:\n      Left - paintbrush color\n      Center - overlay color\n      Right - grid color\n  "-", "=" - adjust brush width\n  "[", "]" - adjust font size\n  F - toggle fill for shapes and arrows\n  V - place vanishing point, hold to scale grid units\n  G - choose grid type\n  J - choose grid cell type\n  I - reset Unsplash image\n  Right-Click - save marks-data')
+		 alert('Ctrl:\n  constrains paintbrush to grid axes\n  constrains shapes to 1x1 aspect ratio\n  constrains line to 15 degree increments\n  Ctrl+Z - undo\n  Ctrl+Y - redo\n  Ctrl+C - copy selection\n  Ctrl+X - cut selection\n  Ctrl+V - paste selection\n\nArrow Keys:\n  Up - constrains paintbrush to vertical\n  Left - constrains paintbrush to horizontal\n  Down - constrains paintbrush to lines intersecting vanishing point\n  Right - constrains paintbrush to arcs about vanishing point\n  Forward Slash - constrains brush to parallel\n  Apostrophe - constrainst brush to perpendicular\n\nQUERY PARAMETERS:\n  document-title\n  screen-size, board-size\n  problem-active\n  problem-image, wallpaper-image\n  marks-data')
 	       }
-	       break; */
+	       break
 	  case 't':
 	  case 'T':
 	    if (!isTyping) {
@@ -3091,10 +3098,13 @@
 	  event.preventDefault()
 	  if (!isTyping) {
 	    constraint = PARALLEL
-	  } else { 
-	   wState[PRINT_HEAD_LOCATION].x += wState[FONT_WIDTH]
-	    drawTextCursor()
-	  }
+	  } 
+	  break
+	case "'":
+	  event.preventDefault()
+	  if (!isTyping) {
+	    constraint = PERPENDICULAR
+	  } 
 	  break
 	case 'p':
 	case 'P':
@@ -3200,6 +3210,7 @@
 	case 'ArrowLeft':
 	case 'ArrowDown':
 	case '/':
+	case "'":
 	case 'Control':
 	  if (!isTyping) {
 	    if (constraint === COMMITTED) {
@@ -3401,13 +3412,7 @@
       applyState(wState)
 
       document.title = query[DOCUMENT_TITLE] || query[MARKS_DATA] || 'Whiteboard' 
-      /* || query[MARKS_IMAGE] 
-	 ? parseFilename(query[MARKS_IMAGE]) 
-	 : query[WALLPAPER_IMAGE] 
-	 ? parseFilename(query[WALLPAPER_IMAGE]) 
-	 : 'Whiteboard' */
-      query[MARKS_IMAGE] && setImage(MARKS, query[MARKS_IMAGE])
-      
+      query[MARKS_IMAGE] && setImage(MARKS, query[MARKS_IMAGE])      
       console.log(`Wallpaper Image: ${wState[WALLPAPER_IMAGE]}`)
       if (query[PROBLEM_IMAGE]) {
 	const problemImg = document.createElement('img')
