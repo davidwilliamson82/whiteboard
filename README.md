@@ -17,6 +17,7 @@ TOOLS: <br />
 &nbsp;&nbsp;L - line<br />
 &nbsp;&nbsp;T - text<br />
 &nbsp;&nbsp;M - measure<br />
+&nbsp;&nbsp;S - selection tool<br />
 <br />
 OTHER CONTROLS: <br />
 &nbsp;&nbsp;backtick, 0 - 9: select brushes, hold to set colors.<br />
@@ -28,17 +29,20 @@ OTHER CONTROLS: <br />
 &nbsp;&nbsp;'\[', ']' - adjust font size<br />
 &nbsp;&nbsp;F - toggle fill for shapes<br />
 &nbsp;&nbsp;V - place vanishing point, hold down to scale grid units<br />
-&nbsp;&nbsp;G - select between no grid, a square grid, a triangular grid, and some time-management tools<br />
-&nbsp;&nbsp;J - select manner in which grid cells are outlined<br />
+&nbsp;&nbsp;G - choose between no grid, a square grid, a triangular grid, and some time-management tools<br />
+&nbsp;&nbsp;J - choose manner in which grid cells are outlined<br />
 &nbsp;&nbsp;I - reset unsplash image<br />
-&nbsp;&nbsp;S - save marks data (load with query parameter)<br />
+&nbsp;&nbsp;Right-Click to save marks-data<br />
 <br />
 Ctrl:
 &nbsp;&nbsp;constrains paintbrush to grid axes, or commits to straight line, if no grid is visible<br />
 &nbsp;&nbsp;constrains rectangle and ellipse to 1x1 aspect ratio<br />
 &nbsp;&nbsp;line to 15° increments<br />
-&nbsp;&nbsp;Ctrl + Z: Undo<br />
-&nbsp;&nbsp;Ctrl + Y: Redo<br />
+&nbsp;&nbsp;Ctrl + Z: undo<br />
+&nbsp;&nbsp;Ctrl + Y: redo<br />
+&nbsp;&nbsp;Ctrl + C: copy selection<br />
+&nbsp;&nbsp;Ctrl + X: cut selection<br />
+&nbsp;&nbsp;Ctrl + V: paste selection<br />
 <br />
 Arrow Keys: <br />
 &nbsp;&nbsp;Up constrains paintbrush to vertical<br />
