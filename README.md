@@ -17,6 +17,7 @@ TOOLS: <br />
 &nbsp;&nbsp;L - line<br />
 &nbsp;&nbsp;T - text<br />
 &nbsp;&nbsp;M - measure<br />
+&nbsp;&nbsp;Z - zoom<br />
 &nbsp;&nbsp;S - selection tool<br />
 <br />
 OTHER CONTROLS: <br />
