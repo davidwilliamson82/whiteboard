@@ -3459,7 +3459,8 @@
       wState[GRID_COLOR] = new Color(wState[GRID_COLOR])
       wState[GRID_TYPE] = new Vector2(wState[GRID_TYPE])
       wState[TIME_PADDING] = new Vector2(wState[TIME_PADDING])
-      wState[CALENDAR_OFFSET] = wState[RECTANGULAR_OFFSET] = new Vector2(wState[RECTANGULAR_OFFSET])
+      wState[RECTANGULAR_OFFSET] = new Vector2(wState[RECTANGULAR_OFFSET])
+      wState[CALENDAR_OFFSET] = wState[RECTANGULAR_OFFSET].copy()
       wState[PLANNER_OFFSET] = new Vector2(
 	(wState[BOARD_SIZE].x - wState[TIME_PADDING].x * 2) / 7,
 	(wState[BOARD_SIZE].y - wState[TIME_PADDING].y) / 48
