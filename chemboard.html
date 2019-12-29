@@ -714,6 +714,7 @@
       const ERASER = 'ERASER' // spacebar (held)
       const BOX_ERASER = 'BOX_ERASER' // x
       const MEASURE = 'MEASURE' // m
+      const ZOOM = 'ZOOM'// z
       const PALETTE = 'PALETTE' // `, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0 (held)
       const SELECT = 'SELECT'
       
@@ -736,7 +737,6 @@
       const BOARD_SIZE = 'BOARD_SIZE' // Vector2 *
       const BOARD_SCALE = 'BOARD_SCALE' // Vector2 *
       const WALLPAPER_IMAGE = 'WALLPAPER_IMAGE' // String, not stored
-      const ZOOM = 'ZOOM' // Number
       const OVERLAY_COLOR = 'OVERLAY_COLOR' // Color *
       const GRID_TYPE = 'GRID_TYPE'
       const RECTANGULAR_OFFSET = 'RECTANGULAR_OFFSET'
@@ -1247,6 +1247,36 @@
 	}
       }
 
+      tools[ZOOM] = {
+	mouseDown: (toolLocation) => {
+	  previousVanishingPoint.setCoordinates(wState[VANISHING_POINT])
+	},
+	mouseMove: (toolLocation) => {
+	  if (mouseIsDown) {
+	    if (shiftIsDown) {
+	      wState[VANISHING_POINT].setCoordinates(
+		previousVanishingPoint.add(toolLocation.add(wState[MOUSE_DOWN_LOCATION].scale(-1)))
+	      )
+	      setGrid()
+	    } else {
+	      const zoomScale = (window.innerHeight + wState[MOUSE_DOWN_LOCATION].y - toolLocation.y) / window.innerHeight
+	      wState[VANISHING_POINT].setCoordinates(
+		wState[VANISHING_POINT]
+		  .add(wState[MOUSE_DOWN_LOCATION].scale(-1)).scale(zoomScale)
+		  .add(wState[MOUSE_DOWN_LOCATION])
+	      )
+	      if (wState[GRID_TYPE].x === 1) {
+		wState[RECTANGULAR_OFFSET].setCoordinates(wState[RECTANGULAR_OFFSET].scale(zoomScale))
+	      } else if (wState[GRID_TYPE].x === 2) {
+		wState[HEX_MAGNITUDE] *= zoomScale
+	      }
+	      setGrid()
+	    }
+	  }
+	},
+	mouseUp: (toolLocation) => {}
+      }
+
       tools[SELECT] = {
 	mouseDown: (toolLocation) => {
 	  clearLayer(TOOLS)
@@ -1706,7 +1736,7 @@
 	  const text = document.createElementNS(svgNameSpace, 'text')
 	  text.setAttribute('x', position.x.toString())
 	  text.setAttribute('y', position.y.toString())
-	  text.setAttribute('fill', color.getRgba() || wState[`${layer}_COLOR`])
+	  text.setAttribute('fill', color ? color.getRgba() : wState[`${layer}_COLOR`])
 	  text.setAttribute('font-family', wState[FONT])
 	  text.setAttribute('font-size', `${size || fontSizes[wState[FONT_HEIGHT]]}px`)
 	  text.innerHTML = content
@@ -2523,11 +2553,12 @@
 	setWhiteboardState(BRUSHES, wState[BRUSHES])
       }
 
+      const getGridCoefficient = (pixels, factor=3) => Math.pow(10, 1 - Math.floor(Math.log10(pixels / factor)))
+      
       const drawGrid = (type, offset) => {
 	if (type.x === 0) {
 	  return
 	}
-	const getCoefficient = (pixels, factor) => Math.pow(10, 1 - Math.floor(Math.log10(pixels / factor)))
 	if (storedFunctions.length > 0) {
 	  for (let storedFunction of storedFunctions) {
 	    plotFunction(storedFunction.f, storedFunction.style, offset, true)
@@ -2553,13 +2584,13 @@
 	  {
 	    origin: wState[VANISHING_POINT],
 	    offset: new Vector2(
-	      offset.rectangular.x * getCoefficient(offset.rectangular.x, 3), 
-	      offset.rectangular.y * getCoefficient(offset.rectangular.y, 3)
+	      offset.rectangular.x * getGridCoefficient(offset.rectangular.x), 
+	      offset.rectangular.y * getGridCoefficient(offset.rectangular.y)
 	    )},
 	  { 
 	    origin: wState[VANISHING_POINT],
 	    offset: new Vector2 ({
-	      magnitude: offset.hex.magnitude * getCoefficient(offset.hex.magnitude, 4),
+	      magnitude: offset.hex.magnitude * getGridCoefficient(offset.hex.magnitude, 4),
 	      angle: offset.hex.angle
 	    })
 	  },
@@ -2700,6 +2731,48 @@
 	      y: cb(nextPlotHeadX)
 	    })
 	  }
+
+	  const coefficients = new Vector2(
+	    getGridCoefficient(offset.rectangular.x),
+	    getGridCoefficient(offset.rectangular.y)
+	  )
+
+	  const labelIntervals = offset.rectangular.scale(coefficients)
+
+	  // console.log('getGridCoefficient(offset.rectangular.x): ', getGridCoefficient(offset.rectangular.x))
+	  plotHeadLocation.setCoordinates(
+	    wState[VANISHING_POINT].x % labelIntervals.x,
+	    wState[VANISHING_POINT].y % labelIntervals.y
+	  )
+	  while (plotHeadLocation.x < wState[BOARD_SIZE].x) {
+	    const content = coefficients.x >= 1 
+	      ? Math.round((plotHeadLocation.x - wState[VANISHING_POINT].x) / wState[RECTANGULAR_OFFSET].x, coefficients.x)
+	      : ((plotHeadLocation.x - wState[VANISHING_POINT].x) / wState[RECTANGULAR_OFFSET].x).toFixed(-Math.log10(coefficients.x))
+	    drawText(
+	      GRID, 
+	      content,
+	      new Vector2(plotHeadLocation.x + 10 * content.toString.length, wState[VANISHING_POINT].y + 16),
+	      wState[GRID_COLOR],
+	      16
+	    )
+	   plotHeadLocation.x += labelIntervals.x
+	  }
+	  while (plotHeadLocation.y < wState[BOARD_SIZE].y) {
+	    const content = coefficients.y >= 1 
+	      ? Math.round((wState[VANISHING_POINT].y - plotHeadLocation.y) / wState[RECTANGULAR_OFFSET].y, coefficients.y)
+	      : ((wState[VANISHING_POINT].y - plotHeadLocation.y) / wState[RECTANGULAR_OFFSET].y).toFixed(-Math.log10(coefficients.y))
+	    drawText(
+	      GRID, 
+	      content,
+	      new Vector2(
+		wState[VANISHING_POINT].x - 10 * content.toString().length - 6, 
+		plotHeadLocation.y - 6),
+	      wState[GRID_COLOR],
+	      16
+	    )
+	    plotHeadLocation.y += labelIntervals.y
+	  }
+
 	  break
 	case 2:
 	  let radians = 0
@@ -2707,15 +2780,15 @@
 	    angle: radians, 
 	    magnitude: cb(radians)
 	  })
-	  while (radians < 2 * Math.PI) {
+	  while (radians < Math.PI * 2) {
 	    if (radians > Math.PI / 180) {
 	      drawLine(
 		GRID,
 		previousPlotHeadLocation
-		  .scale({ x: offset.hex, y: -offset.hex })
+		  .scale({ x: offset.hex.magnitude, y: -offset.hex.magnitude })
 		  .add(wState[VANISHING_POINT]),
 		plotHeadLocation
-		  .scale({ x: offset.hex, y: -offset.hex })
+		  .scale({ x: offset.hex.magnitude, y: -offset.hex.magnitude })
 		  .add(wState[VANISHING_POINT]),
 		brush.color,
 		brush.width
@@ -2896,7 +2969,7 @@
 	  switch (event.key) {
 	    case 'h':
 	       if (!isTyping) {
-		 alert('TOOLS:\n  P - paintbrush\n  R - rectangle\n  E - ellipse\n  L - line\n  T - text\n  M - measure\n  S - select\n\nOTHER CONTROLS:\n  Backtick, 0 - 9: choose brush, hold to set color\n    the color palettes are arranged as follows:\n      Left - paintbrush color\n      Center - overlay color\n      Right - grid color\n  "-", "=" - adjust brush width\n  "[", "]" - adjust font size\n  F - toggle fill for shapes and arrows\n  V - place vanishing point, hold to scale grid units\n  G - choose grid type\n  J - choose grid cell type\n  I - reset Unsplash image\n  Right-Click - save marks-data')
+		 alert('TOOLS:\n  P - paintbrush\n  R - rectangle\n  E - ellipse\n  L - line\n  T - text\n  M - measure\n  Z - zoom\n  S - select\n\nOTHER CONTROLS:\n  Backtick, 0 - 9: choose brush, hold to set color\n    the color palettes are arranged as follows:\n      Left - paintbrush color\n      Center - overlay color\n      Right - grid color\n  "-", "=" - adjust brush width\n  "[", "]" - adjust font size\n  F - toggle fill for shapes and arrows\n  V - place vanishing point, hold to scale grid units\n  G - choose grid type\n  J - choose grid cell type\n  I - reset Unsplash image\n  Right-Click - save marks-data')
 		 alert('Ctrl:\n  constrains paintbrush to grid axes\n  constrains shapes to 1x1 aspect ratio\n  constrains line to 15 degree increments\n  Ctrl+Z - undo\n  Ctrl+Y - redo\n  Ctrl+C - copy selection\n  Ctrl+X - cut selection\n  Ctrl+V - paste selection\n\nArrow Keys:\n  Up - constrains paintbrush to vertical\n  Left - constrains paintbrush to horizontal\n  Down - constrains paintbrush to lines intersecting vanishing point\n  Right - constrains paintbrush to arcs about vanishing point\n  Forward Slash - constrains brush to parallel\n  Apostrophe - constrainst brush to perpendicular\n\nQUERY PARAMETERS:\n  document-title\n  screen-size, board-size\n  problem-image, wallpaper-image\n  marks-data')
 	       }
 	       break
@@ -3137,6 +3210,14 @@
 	    lastTool = MEASURE
 	  }
 	  break
+	case 'z':
+	case 'Z':
+	  if (!isTyping) {
+	    clearLayer(TOOLS)
+	    setWhiteboardState(TOOL, ZOOM)
+	    lastTool = ZOOM
+	  }
+	  break
 	case 'f':
 	case 'F':
 	  setWhiteboardState(FILL_ACTIVE, !wState[FILL_ACTIVE])
@@ -3273,32 +3354,36 @@
 	  break
 	case 'v':
 	case 'V':
-	  if (!isTyping && controlIsDown) {
-	    const originalMarks = layers[MARKS].getImageData(
-	      currentMouseLocation.x, 
-	      currentMouseLocation.y, 
-	      clipboard.width, 
-	      clipboard.height
-	    )
-	    let newImageData = []
-	    for (let i = 0; i < clipboard.data.length; i += 4) {
-	      let rOld = originalMarks.data[i]
-	      let rNew = clipboard.data[i]
-	      let gOld = originalMarks.data[i + 1]
-	      let gNew = clipboard.data[i + 1]
-	      let bOld = originalMarks.data[i + 2]
-	      let bNew = clipboard.data[i + 2]
-	      let aOld = originalMarks.data[i + 3]
-	      let aNew = clipboard.data[i + 3]
-	      newImageData.push(Math.min(255, rNew * (aNew / 255) + rOld * (aOld / 255) * (1 - (aNew / 255))))
-	      newImageData.push(Math.min(255, gNew * (aNew / 255) + gOld * (aOld / 255) * (1 - (aNew / 255))))
-	      newImageData.push(Math.min(255, bNew * (aNew / 255) + bOld * (aOld / 255) * (1 - (aNew / 255))))
-	      newImageData.push(Math.min(255, aOld + aNew))
+	  if (!isTyping) { 
+	    if (controlIsDown) {
+	      const originalMarks = layers[MARKS].getImageData(
+		currentMouseLocation.x, 
+		currentMouseLocation.y, 
+		clipboard.width, 
+		clipboard.height
+	      )
+	      let newImageData = []
+	      for (let i = 0; i < clipboard.data.length; i += 4) {
+		let rOld = originalMarks.data[i]
+		let rNew = clipboard.data[i]
+		let gOld = originalMarks.data[i + 1]
+		let gNew = clipboard.data[i + 1]
+		let bOld = originalMarks.data[i + 2]
+		let bNew = clipboard.data[i + 2]
+		let aOld = originalMarks.data[i + 3]
+		let aNew = clipboard.data[i + 3]
+		newImageData.push(Math.min(255, rNew * (aNew / 255) + rOld * (aOld / 255) * (1 - (aNew / 255))))
+		newImageData.push(Math.min(255, gNew * (aNew / 255) + gOld * (aOld / 255) * (1 - (aNew / 255))))
+		newImageData.push(Math.min(255, bNew * (aNew / 255) + bOld * (aOld / 255) * (1 - (aNew / 255))))
+		newImageData.push(Math.min(255, aOld + aNew))
+	      }
+	      const newClipboard = new ImageData(Uint8ClampedArray.from(newImageData), clipboard.width, clipboard.height)
+	      layers[MARKS].putImageData(newClipboard, currentMouseLocation.x, currentMouseLocation.y)
+	      updateMarksHistory()
+	    } else {
+	      wState[TOOL] = lastTool
 	    }
-	    const newClipboard = new ImageData(Uint8ClampedArray.from(newImageData), clipboard.width, clipboard.height)
-	    layers[MARKS].putImageData(newClipboard, currentMouseLocation.x, currentMouseLocation.y)
-	    updateMarksHistory()
-	  }
+	  } 
 	  break
 	case 'y':
 	case 'Y':
@@ -3306,12 +3391,7 @@
 	    historyIndex += 1
 	    setImage(MARKS, marksHistory[historyIndex])
 	  }
-	case 'v':
-	case 'V':
-	  if (!isTyping) {
-	    wState[TOOL] = lastTool
-	    break
-	  }
+	  break
 	}
 	keyIsDown = false
       })
@@ -3323,13 +3403,15 @@
       let isCopying = false
       let isPickingColor = false
       let clipboard
-      let selectBox = globalOrigin.copy()
+      let selectBox
       let measurementElement
       let isDrawingRectangle = false
       let isDrawingLine = false
       let isTyping = false
       let constraint = NONE
       let storedFunctions = []
+      let previousVanishingPoint = globalOrigin.copy()
+      let previousOffsetMagnitude
       let historyIndex = 0
       let currentMouseLocation = globalOrigin.copy()
       let marksHistory
