@@ -423,6 +423,13 @@
 	    ? max 
 	    : value
       }
+      
+      const absoluteModulus = (value, increment) => {
+	if (value < 0) {
+	   value += Math.ceil(Math.abs(value) / Math.abs(increment)) * Math.abs(increment)
+	}
+	return value % increment
+      }
 
       const parseFilename = (name) => name.split('/').pop().split('.').slice(0, -1).join('.')
       const tabTitle = (paths) => {
@@ -1380,7 +1387,7 @@
 	      rectangular: wState[RECTANGULAR_OFFSET].scale(offset.rectangular),
 	      hex: { 
 		magnitude: wState[HEX_MAGNITUDE] * offset.hex.magnitude, 
-		angle: (((wState[HEX_ANGLE] + offset.hex.angle) - Math.PI / 6) % (Math.PI / 3)) + Math.PI / 6
+		angle: absoluteModulus(wState[HEX_ANGLE] + offset.hex.angle, Math.PI)
 	      }
 	    })
 	    drawCircle(
@@ -1406,7 +1413,7 @@
 	      setWhiteboardState(RECTANGULAR_OFFSET, wState[RECTANGULAR_OFFSET].scale(offset.rectangular))
 	    } else if (wState[GRID_TYPE].x === 2) {
 	      setWhiteboardState(HEX_MAGNITUDE, wState[HEX_MAGNITUDE] * offset.hex.magnitude)
-	      setWhiteboardState(HEX_ANGLE, (((wState[HEX_ANGLE] + offset.hex.angle) - Math.PI / 6) % (Math.PI / 3)) + Math.PI / 6)
+	      setWhiteboardState(HEX_ANGLE, absoluteModulus(wState[HEX_ANGLE] + offset.hex.angle, Math.PI))
 	    }
 	    setGrid()
 	  }
@@ -2591,7 +2598,7 @@
 	    origin: wState[VANISHING_POINT],
 	    offset: new Vector2 ({
 	      magnitude: offset.hex.magnitude * getGridCoefficient(offset.hex.magnitude, 4),
-	      angle: offset.hex.angle
+	      angle: absoluteModulus(offset.hex.angle + Math.PI / 6, Math.PI / 3) - Math.PI / 6
 	    })
 	  },
 	  {
@@ -2665,7 +2672,7 @@
 	  magnitude = angle.getMagnitude()
 	  angle = angle.getAngle()
 	}
-	setWhiteboardState(HEX_ANGLE, angle)
+	setWhiteboardState(HEX_ANGLE, absoluteModulus(angle, Math.PI))
 	setWhiteboardState(HEX_MAGNITUDE, magnitude)
 	setGrid()
       }
