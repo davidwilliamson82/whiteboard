@@ -907,6 +907,35 @@
 	  break
 	}
       }
+
+      const getMeasureText = (toolLocation) => {
+	switch (wState[GRID_TYPE].x) {
+	case 0:
+	  return `${toolLocation.getMagnitude(wState[MOUSE_DOWN_LOCATION]).toFixed(0)}px`
+	  break
+	case 1:
+	  return `(${(toolLocation.getRectangularOffset().x - wState[MOUSE_DOWN_LOCATION].getRectangularOffset().x).toFixed(2)}, ${(wState[MOUSE_DOWN_LOCATION].getRectangularOffset().y - toolLocation.getRectangularOffset().y).toFixed(2)})`
+	  break
+	case 2:
+	  return `M: ${(toolLocation.getHexOffset().getMagnitude(wState[MOUSE_DOWN_LOCATION].getHexOffset())).toFixed(2)}\nA: ${(((Math.PI * 2) - toolLocation.getAngle(wState[MOUSE_DOWN_LOCATION])) * 180 / Math.PI).toFixed(0)}°`
+	  break
+	case 3:
+	  switch (wState[GRID_TYPE].y) {
+	  case 0:
+	    return `${Math.abs(toolLocation.getCalendarDays().x - wState[MOUSE_DOWN_LOCATION].getCalendarDays().x + ((toolLocation.getCalendarDays().y - wState[MOUSE_DOWN_LOCATION].getCalendarDays().y) * 7))} days`
+	    break
+	  case 1:
+	    const hours = Math.abs(((toolLocation.getPlannerHours().x - wState[MOUSE_DOWN_LOCATION].getPlannerHours().x) * 24) + toolLocation.getPlannerHours().y - wState[MOUSE_DOWN_LOCATION].getPlannerHours().y)
+	    return `${Math.floor(hours).toString().padStart(2, '0')}:${(Math.round((hours % 1) * 60)).toString().padStart(2, '0')}`
+	    break
+	  case 2:
+	    const minutes = (toolLocation.getClockTime() - wState[MOUSE_DOWN_LOCATION].getClockTime() + 60) % 60
+	    return `${Math.floor(minutes).toString().padStart(2, '0')}:${(Math.round((minutes % 1) * 60)).toString().padStart(2, '0')}`
+	    break
+	  }
+	  break
+	}
+      }
       
       const tools = {}
       tools[PAINT_BRUSH] = {
@@ -1202,7 +1231,18 @@
 	    measurementElement.setAttribute('stroke-width', '6px')
 	    layers[TOOLS].appendChild(measurementElement)
 	  }
-
+	  if (wState[FILL_ACTIVE]) {
+	    drawText(
+	      TOOLS,
+	      getMeasureText(toolLocation),
+	      toolLocation.add(new Vector2({
+		angle: toolLocation.getAngle(wState[MOUSE_DOWN_LOCATION]),
+		magnitude: 37.20215047547655
+	      })).add(new Vector2(-20, 16)),
+	      wState[TOOLS_COLOR],
+	      16
+	    )
+	  }
 	},
 	mouseUp: (toolLocation) => {
 	  const mouseDownVector = new Vector2(wState[MOUSE_DOWN_LOCATION])
@@ -1246,6 +1286,18 @@
 	      console.log(`measurement:\n  minutes: ${Math.floor(minutes)}\n  seconds: ${Math.round((minutes % 1) * 60)}`)
 	      break
 	    }
+	  }
+	  if (wState[FILL_ACTIVE]) {
+	    drawText(
+	      TOOLS,
+	      getMeasureText(toolLocation),
+	      toolLocation.add(new Vector2({
+		angle: toolLocation.getAngle(wState[MOUSE_DOWN_LOCATION]),
+		magnitude: 37.20215047547655
+	      })).add(new Vector2(-20, 16)),
+	      wState[TOOLS_COLOR],
+	      16
+	    )
 	  }
 	  setWhiteboardState(MEASUREMENT, new Vector2(
 	    wState[MOUSE_UP_LOCATION].x - wState[MOUSE_DOWN_LOCATION].x,
@@ -3109,6 +3161,9 @@
 	  event.preventDefault()
 	  if (!isTyping) {
 	    constraint = ARC
+	  }else { 
+	    wState[PRINT_HEAD_LOCATION].x += wState[FONT_WIDTH]
+	    drawTextCursor()
 	  } 
 	  break
 	case 'ArrowUp':
