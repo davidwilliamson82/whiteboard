@@ -10,15 +10,15 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLI
 <br />
 _End license text._</sub></sub><br />
 <br />
-
-If all you want to use is the whiteboard, **just download the index.html** and open it with your web browser.
-
-I like to use New Tab Redirect, along with a query parameter, specifying the name of the marks-data I am using.
-https://chrome.google.com/webstore/detail/new-tab-redirect/icpgjfneehieebagbmdbhnlpiopdcmna?hl=en-US
-
-Here is a Youtube tutorial.
-https://www.youtube.com/embed/2RI41DfeWuQ
-
+<br />
+If all you want to use is the whiteboard, **just download the index.html** and open it with your web browser.<br />
+<br />
+I like to use New Tab Redirect, along with a query parameter, specifying the name of the marks-data I am using.<br />
+https://chrome.google.com/webstore/detail/new-tab-redirect/icpgjfneehieebagbmdbhnlpiopdcmna?hl=en-US<br />
+<br />
+Here is a Youtube tutorial.<br />
+https://www.youtube.com/embed/2RI41DfeWuQ<br />
+<br />
 TOOLS: <br />
 &nbsp;&nbsp;P - paintbrush<br />
 &nbsp;&nbsp;R - rectangle<br />
