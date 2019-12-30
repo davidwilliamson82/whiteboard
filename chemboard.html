@@ -908,32 +908,60 @@
 	}
       }
 
-      const getMeasureText = (toolLocation) => {
-	switch (wState[GRID_TYPE].x) {
-	case 0:
-	  return `${toolLocation.getMagnitude(wState[MOUSE_DOWN_LOCATION]).toFixed(0)}px`
-	  break
-	case 1:
-	  return `(${(toolLocation.getRectangularOffset().x - wState[MOUSE_DOWN_LOCATION].getRectangularOffset().x).toFixed(2)}, ${(wState[MOUSE_DOWN_LOCATION].getRectangularOffset().y - toolLocation.getRectangularOffset().y).toFixed(2)})`
-	  break
-	case 2:
-	  return `M: ${(toolLocation.getHexOffset().getMagnitude(wState[MOUSE_DOWN_LOCATION].getHexOffset())).toFixed(2)}\nA: ${(((Math.PI * 2) - toolLocation.getAngle(wState[MOUSE_DOWN_LOCATION])) * 180 / Math.PI).toFixed(0)}°`
-	  break
-	case 3:
-	  switch (wState[GRID_TYPE].y) {
+      const drawMeasureText = (mouseDown, toolLocation, gridType) => {
+	// console.log('mouseDown, toolLocation, gridType: ', mouseDown, toolLocation, gridType)
+	if (wState[FILL_ACTIVE]) {
+	  let content
+	  switch (gridType.x) {
 	  case 0:
-	    return `${Math.abs(toolLocation.getCalendarDays().x - wState[MOUSE_DOWN_LOCATION].getCalendarDays().x + ((toolLocation.getCalendarDays().y - wState[MOUSE_DOWN_LOCATION].getCalendarDays().y) * 7))} days`
+	    content = `${toolLocation.getMagnitude(mouseDown).toFixed(0)}px`
 	    break
 	  case 1:
-	    const hours = Math.abs(((toolLocation.getPlannerHours().x - wState[MOUSE_DOWN_LOCATION].getPlannerHours().x) * 24) + toolLocation.getPlannerHours().y - wState[MOUSE_DOWN_LOCATION].getPlannerHours().y)
-	    return `${Math.floor(hours).toString().padStart(2, '0')}:${(Math.round((hours % 1) * 60)).toString().padStart(2, '0')}`
+	    content = `(${(toolLocation.getRectangularOffset().x - mouseDown.getRectangularOffset().x).toFixed(2)}, ${(mouseDown.getRectangularOffset().y - toolLocation.getRectangularOffset().y).toFixed(2)})`
 	    break
 	  case 2:
-	    const minutes = (toolLocation.getClockTime() - wState[MOUSE_DOWN_LOCATION].getClockTime() + 60) % 60
-	    return `${Math.floor(minutes).toString().padStart(2, '0')}:${(Math.round((minutes % 1) * 60)).toString().padStart(2, '0')}`
+	    content = `${(toolLocation.getHexOffset().getMagnitude(mouseDown.getHexOffset())).toFixed(2)}, ${(((Math.PI * 2) - toolLocation.getAngle(mouseDown)) * 180 / Math.PI).toFixed(0)}°`
+	    break
+	  case 3:
+	    switch (gridType.y) {
+	    case 0:
+	      content = `${Math.abs(toolLocation.getCalendarDays().x - mouseDown.getCalendarDays().x + ((toolLocation.getCalendarDays().y - mouseDown.getCalendarDays().y) * 7))} days`
+	      break
+	    case 1:
+	      const hours = Math.abs(((toolLocation.getPlannerHours().x - mouseDown.getPlannerHours().x) * 24) + toolLocation.getPlannerHours().y - mouseDown.getPlannerHours().y)
+	      content = `${Math.floor(hours).toString().padStart(2, '0')}:${(Math.round((hours % 1) * 60)).toString().padStart(2, '0')}`
+	      break
+	    case 2:
+	      const minutes = (toolLocation.getClockTime() - mouseDown.getClockTime() + 60) % 60
+	      content = `${Math.floor(minutes).toString().padStart(2, '0')}:${(Math.round((minutes % 1) * 60)).toString().padStart(2, '0')}`
+	      break
+	    }
 	    break
 	  }
-	  break
+	  
+	  const offset = {}
+	  if ((gridType.x === 3) && (gridType.y === 2)) {
+	    offset.angle = toolLocation.getAngle(getCenter())
+	    offset.location = new Vector2({
+	      angle: toolLocation.getAngle(getCenter()),
+	      magnitude: mouseDown.getMagnitude(getCenter())
+	    }).add(getCenter())
+	  } else {
+	    offset.angle = toolLocation.getAngle(mouseDown)
+	    offset.location = toolLocation
+	  }
+
+	  drawText(
+	    TOOLS,
+	    content,
+	    offset.location
+	      .add(new Vector2({
+		angle: offset.angle,
+		magnitude: (Math.abs(Math.cos(offset.angle)) + Math.abs(Math.sin(offset.angle)) * 0.4) * content.length * 5 + 10
+	      })).add(new Vector2(-content.length * 5, 8)),
+	    wState[TOOLS_COLOR],
+	    16
+	  )
 	}
       }
       
@@ -1120,23 +1148,6 @@
       tools[LINE] = {
 	mouseDown: (toolLocation) => {
 	  clearLayer(TOOLS)
-	  if (wState[FILL_ACTIVE]) {
-	    drawArrow(
-	      TOOLS,
-	      wState[MOUSE_DOWN_LOCATION],
-	      toolLocation,
-	      wState[TOOLS_COLOR],
-	      wState[BRUSHES][wState[BRUSH]].width
-	    )
-	  } else {
-	    drawLine(
-	      TOOLS,
-	      wState[MOUSE_DOWN_LOCATION],
-	      toolLocation,
-	      wState[TOOLS_COLOR],
-	      wState[BRUSHES][wState[BRUSH]].width
-	    )
-	  }
 	},
 	mouseMove: (toolLocation) => {
 	  if (mouseIsDown && constraints[constraint](toolLocation)) {
@@ -1231,18 +1242,7 @@
 	    measurementElement.setAttribute('stroke-width', '6px')
 	    layers[TOOLS].appendChild(measurementElement)
 	  }
-	  if (wState[FILL_ACTIVE]) {
-	    drawText(
-	      TOOLS,
-	      getMeasureText(toolLocation),
-	      toolLocation.add(new Vector2({
-		angle: toolLocation.getAngle(wState[MOUSE_DOWN_LOCATION]),
-		magnitude: 37.20215047547655
-	      })).add(new Vector2(-20, 16)),
-	      wState[TOOLS_COLOR],
-	      16
-	    )
-	  }
+	  drawMeasureText(wState[MOUSE_DOWN_LOCATION], toolLocation, wState[GRID_TYPE])
 	},
 	mouseUp: (toolLocation) => {
 	  const mouseDownVector = new Vector2(wState[MOUSE_DOWN_LOCATION])
@@ -1287,22 +1287,12 @@
 	      break
 	    }
 	  }
-	  if (wState[FILL_ACTIVE]) {
-	    drawText(
-	      TOOLS,
-	      getMeasureText(toolLocation),
-	      toolLocation.add(new Vector2({
-		angle: toolLocation.getAngle(wState[MOUSE_DOWN_LOCATION]),
-		magnitude: 37.20215047547655
-	      })).add(new Vector2(-20, 16)),
-	      wState[TOOLS_COLOR],
-	      16
-	    )
-	  }
-	  setWhiteboardState(MEASUREMENT, new Vector2(
-	    wState[MOUSE_UP_LOCATION].x - wState[MOUSE_DOWN_LOCATION].x,
-	    wState[MOUSE_UP_LOCATION].y - wState[MOUSE_DOWN_LOCATION].y
-	  ))
+	  drawMeasureText(wState[MOUSE_DOWN_LOCATION], toolLocation, wState[GRID_TYPE])
+	  setWhiteboardState(MEASUREMENT, {
+	    mouseUp: wState[MOUSE_UP_LOCATION].copy(),
+	    mouseDown: wState[MOUSE_DOWN_LOCATION].copy(),
+	    gridType: wState[GRID_TYPE].copy()
+	  })
 	}
       }
 
@@ -3282,7 +3272,13 @@
 	  break
 	case 'f':
 	case 'F':
+	  clearLayer(TOOLS)
 	  setWhiteboardState(FILL_ACTIVE, !wState[FILL_ACTIVE])
+	  drawMeasureText(
+	    wState[MEASUREMENT].mouseDown,
+	    wState[MEASUREMENT].mouseUp,
+	    wState[MEASUREMENT].gridType
+	  )
 	  break
 	case ' ':
 	  event.preventDefault()
