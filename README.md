@@ -12,9 +12,12 @@ _End license text._</sub></sub><br />
 <br />
 
 If all you want to use is the whiteboard, **just download the index.html** and open it with your web browser.
-I like to use <a src="https://chrome.google.com/webstore/detail/new-tab-redirect/icpgjfneehieebagbmdbhnlpiopdcmna?hl=en-US">New Tab Redirect</a>, along with a query parameter, specifying the name of the marks-data I am using.
 
-Here is a <a src="https://www.youtube.com/embed/2RI41DfeWuQ">Youtube tutorial.</a>
+I like to use New Tab Redirect, along with a query parameter, specifying the name of the marks-data I am using.
+https://chrome.google.com/webstore/detail/new-tab-redirect/icpgjfneehieebagbmdbhnlpiopdcmna?hl=en-US
+
+Here is a Youtube tutorial.
+https://www.youtube.com/embed/2RI41DfeWuQ
 
 TOOLS: <br />
 &nbsp;&nbsp;P - paintbrush<br />
