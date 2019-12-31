@@ -629,7 +629,19 @@
 	    dom[WALLPAPER].style.background = `url(${src})`
 	    dom[WALLPAPER].style.backgroundAttachment = 'fixed'
 	    dom[WALLPAPER].style.backgroundRepeat = 'no-repeat'
-	    dom[WALLPAPER].style.backgroundSize = `${wState[SCREEN_SIZE].x}px ${wState[SCREEN_SIZE].y}px`
+	    if (query[WALLPAPER_IMAGE]) {
+	      const wallpaperImg = document.createElement("IMG")
+	      wallpaperImg.src = src
+	      wallpaperImg.onload = () => {
+		console.log('wallpaperImg: ', wallpaperImg)
+		console.log('wallpaerImg.naturalWidth, wallpaperImg.naturalHeight: ', wallpaperImg.naturalWidth, wallpaperImg.naturalHeight)
+		const imageIsTall = (wallpaperImg.naturalHeight / wallpaperImg.naturalWidth) > (wState[SCREEN_SIZE].y / wState[SCREEN_SIZE].x)
+		dom[WALLPAPER].style.backgroundSize = `${imageIsTall ? wallpaperImg.naturalWidth * (wState[SCREEN_SIZE].y / wallpaperImg.naturalHeight) : wState[SCREEN_SIZE].x}px ${imageIsTall ? wState[SCREEN_SIZE].y : wallpaperImg.naturalHeight * (wState[SCREEN_SIZE].x / wallpaperImg.naturalWidth)}px`
+		dom[WALLPAPER].style.backgroundPosition = 'center'
+	      }
+	    } else {
+	      dom[WALLPAPER].style.backgroundSize = `${wState[SCREEN_SIZE].x}px ${wState[SCREEN_SIZE].y}px`
+	    }
 	  } else {
 	    img = document.createElement('img')
 	    img.src = src
