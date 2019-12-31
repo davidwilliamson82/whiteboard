@@ -327,11 +327,11 @@
 	}
 
 	copy () {
-	  return new Vector2(this.x, this.y);
+	  return new Vector2(this.x, this.y)
 	}
 
 	add (v) {
-	  return new Vector2(this.x + v.x, this.y + v.y);
+	  return new Vector2(this.x + v.x, this.y + v.y)
 	}
 
 	scale (s) {
@@ -345,7 +345,14 @@
 	  if (!v) {
 	    v = new Vector2(0, 0)
 	  }
-	  return Math.sqrt((this.x - v.x) ** 2 + (this.y - v.y) ** 2);
+	  return Math.sqrt((this.x - v.x) ** 2 + (this.y - v.y) ** 2)
+	}
+	
+	getTangent (v) {
+	  if (!v) {
+	    v = new Vector2(0, 0)
+	  }
+	  return (this.x - v.x) / (this.y - v.y)
 	}
 
 	dot (v) {
@@ -1947,7 +1954,7 @@
 	    angle: wState[HEX_ANGLE] 
 	  })
 	} = options
-	const headIntervals = new Vector2 (
+	const headIntervals = new Vector2(
 	  offset.getMagnitude() * Math.sqrt(3),
 	  offset.getMagnitude()
 	)
@@ -2650,7 +2657,7 @@
 	    )},
 	  { 
 	    origin: wState[VANISHING_POINT],
-	    offset: new Vector2 ({
+	    offset: new Vector2({
 	      magnitude: offset.hex.magnitude * getGridCoefficient(offset.hex.magnitude, 4),
 	      angle: absoluteModulus(offset.hex.angle + Math.PI / 6, Math.PI / 3) - Math.PI / 6
 	    })
@@ -2717,6 +2724,27 @@
 	)
 	setGrid()
       }
+
+      
+      const ansiALetterSize = new Vector2(8.5, 11)
+      const setToLetterSize = (options={}) => {
+	let {
+	  horizontalCells=null,
+	  verticalCells=null,
+	  scale=wState[RECTANGULAR_OFFSET].getMagnitude() / ansiALetterSize.getMagnitude(),
+	  landscape=false
+	} = options
+	const width = landscape ? ansiALetterSize.y : ansiALetterSize.x
+	const height = landscape ? ansiALetterSize.x : ansiALetterSize.y
+	scale = horizontalCells 
+	  ? wState[SCREEN_SIZE].x / (horizontalCells * width) 
+	  : verticalCells 
+	  ?  wState[SCREEN_SIZE].y / (verticalCells * height)
+	  : scale
+	landscape 
+	  ? setRectangularOffset(ansiALetterSize.y * scale, ansiALetterSize.x * scale)
+	  : setRectangularOffset(ansiALetterSize.scale(scale))
+      }
       
       const setHexagonalOffset = (
 	angle=Math.round(wState[HEX_ANGLE] * 6 / Math.PI) * Math.PI / 6,
@@ -2742,6 +2770,12 @@
 
       const getCenter = (size='SCREEN') => {
 	return new Vector2(wState[`${size}_SIZE`].scale(1 / 2))
+      }
+
+      const straightenGrids = () => {
+	setRectangularOffset()
+	setHexagonalOffset()
+	setVanishingPoint(getCenter())
       }
 
       const addAngle = (degrees) => {
@@ -3276,7 +3310,7 @@
 	  break
 	case 'z':
 	case 'Z':
-	  if (!isTyping) {
+	  if (!isTyping && !controlIsDown) {
 	    clearLayer(TOOLS)
 	    setWhiteboardState(TOOL, ZOOM)
 	    lastTool = ZOOM
