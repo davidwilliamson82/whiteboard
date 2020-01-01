@@ -3079,13 +3079,17 @@
 	    break;
 	  case 'g':
 	  case 'G':
-	    wState[GRID_TYPE].setCoordinates((wState[GRID_TYPE].x + 1) % 4, wState[GRID_TYPE].y)
-	    setGrid()
+	    if (!isTyping) {
+	      wState[GRID_TYPE].setCoordinates((wState[GRID_TYPE].x + 1) % 4, wState[GRID_TYPE].y)
+	      setGrid()
+	    }
 	    break
 	  case 'j':
 	  case 'J':
-	    wState[GRID_TYPE].setCoordinates(wState[GRID_TYPE].x, (wState[GRID_TYPE].y + 1) % 3)
-	    setGrid()
+	    if (!isTyping) {
+	      wState[GRID_TYPE].setCoordinates(wState[GRID_TYPE].x, (wState[GRID_TYPE].y + 1) % 3)
+	      setGrid()
+	    }
 	    break;
 	  case 'i':
 	  case 'I':
