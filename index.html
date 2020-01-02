@@ -2637,6 +2637,9 @@
 	    plotFunction(storedFunction.f, storedFunction.style, offset, true)
 	  }
 	}
+	if (mathProblemState > -1) {
+	  doMathProblem(mathProblemState, wState[MATH_PROBLEM_LIMIT], true)
+	}
 	return [
 	  [
 	    drawRectangularDotsGrid,
@@ -2682,9 +2685,6 @@
 
       const setGrid = (type=wState[GRID_TYPE]) => {
 	clearLayer(GRID)
-	if (mathProblemState > -1) {
-	  doMathProblem(mathProblemState, wState[MATH_PROBLEM_LIMIT, true])
-	}
 	if (!isTyping) {
 	  if (type.x === 0) {
 	    hoursElement.style.display = daysElement.style.display = 'none'
@@ -2923,10 +2923,7 @@
 	let sum
 	mathProblemState = problemState
 	wState[MATH_PROBLEM_LIMIT] = upperLimit
-	switch (problemState) {
-	case -1:
-	  mathProblemState = 0
-	case 0: 
+	if (problemState > -1) {
 	  if (!preserve) {
 	    wState[SUM] = Math.floor(Math.random() * (upperLimit - 2)) + 2
 	    wState[DIFFERENCE] = Math.round(Math.random() * wState[SUM])
@@ -2994,28 +2991,31 @@
 	      120
 	    )
 	  }
-	  break
-	case 1:
-	  subtrahend = (wState[SUM] - wState[DIFFERENCE]).toString()
-	  difference = wState[DIFFERENCE].toString()
-	  sum = wState[SUM].toString()
-	  if (wState[IS_ADDING]) {
-	    drawText(
-	      GRID,
-	      sum,
-	      new Vector2(328.8 + 74.4 * (subtrahend.length + difference.length), 200),
-	      wState[BRUSHES][10].color,
-	      120
-	    )
-	  } else {
-	    drawText(
-	      GRID,
-	      subtrahend,
-	      new Vector2(328.8 + 74.4 * (sum.length + difference.length), 200),
-	      wState[BRUSHES][10].color,
-	      120
-	    )
+	  if (problemState > 0) { 
+	    subtrahend = (wState[SUM] - wState[DIFFERENCE]).toString()
+	    difference = wState[DIFFERENCE].toString()
+	    sum = wState[SUM].toString()
+	    if (wState[IS_ADDING]) {
+	      drawText(
+		GRID,
+		sum,
+		new Vector2(328.8 + 74.4 * (subtrahend.length + difference.length), 200),
+		wState[BRUSHES][10].color,
+		120
+	      )
+	    } else {
+	      drawText(
+		GRID,
+		subtrahend,
+		new Vector2(328.8 + 74.4 * (sum.length + difference.length), 200),
+		wState[BRUSHES][10].color,
+		120
+	      )
+	    }
 	  }
+	} else {
+	  mathProblemState = 0
+	  doMathProblem(mathProblemState)
 	}
       }
 
@@ -3486,7 +3486,11 @@
 	   wState[PRINT_HEAD_LOCATION].y += wState[LINE_SPACING]
 	    drawTextCursor()
 	  } else if (mathProblemState > -1) {
-	    doMathProblem(mathProblemState = (mathProblemState + 1) % 2)
+	    doMathProblem(
+	      mathProblemState = (mathProblemState + 1) % 2, 
+	      wState[MATH_PROBLEM_LIMIT], 
+	      [false, true][mathProblemState]
+	    )
 	    mathProblemState === 0 && setGrid()
 	  }
 	}
