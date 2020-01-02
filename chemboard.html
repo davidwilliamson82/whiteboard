@@ -806,6 +806,11 @@
       const DIAGONAL = 'DIAGONAL'
       const COMMITTED = 'COMMITTED'
       const COMMIT_RADIUS = 'COMMIT_RADIUS'
+      
+      const MATH_PROBLEM_LIMIT = 'MATH_PROBLEM_LIMIT'
+      const IS_ADDING = 'IS_ADDING'
+      const SUM = 'SUM'
+      const DIFFERENCE = 'DIFFERENCE'
 
       const dom = {}
       dom[WALLPAPER] = document.getElementById(WALLPAPER)
@@ -1733,6 +1738,7 @@
       defaultState[MARKS_DATA] = 'untitled'
       defaultState[SAVED_MARKS_DATA] = {}
       defaultState[MARKS_HISTORY_LENGTH] = 50
+      defaultState[MATH_PROBLEM_LIMIT] = 10
 
       const updateMarksHistory = (dataURL=dom[MARKS].toDataURL('image/png')) => {
 	if (marksHistory.length < wState[MARKS_HISTORY_LENGTH]) {
@@ -2606,7 +2612,6 @@
 	case layers[MARKS]:
 	  layers[MARKS].strokeStyle = color.getRgba()
 	  layers[MARKS].fillStyle = color.getRgba()
-	  // layers[MARKS].globalAlpha = color.alpha
 	  const brushes = [...wState[BRUSHES]]
 	  brushes[wState[BRUSH]].color = color
 	  setWhiteboardState(BRUSHES, brushes)
@@ -2676,7 +2681,10 @@
       }
 
       const setGrid = (type=wState[GRID_TYPE]) => {
-	clearLayer(GRID)	
+	clearLayer(GRID)
+	if (mathProblemState > -1) {
+	  doMathProblem(mathProblemState, wState[MATH_PROBLEM_LIMIT, true])
+	}
 	if (!isTyping) {
 	  if (type.x === 0) {
 	    hoursElement.style.display = daysElement.style.display = 'none'
@@ -2899,9 +2907,116 @@
 	  break
 	}
       }
+
       const clearFunctions = () => {
 	storedFunctions = []
 	setGrid()
+      }
+
+      const doMathProblem = (
+	problemState=mathProblemState, 
+	upperLimit=wState[MATH_PROBLEM_LIMIT], 
+	preserve=false
+      ) => {
+	let subtrahend
+	let difference
+	let sum
+	mathProblemState = problemState
+	wState[MATH_PROBLEM_LIMIT] = upperLimit
+	switch (problemState) {
+	case -1:
+	  mathProblemState = 0
+	case 0: 
+	  if (!preserve) {
+	    wState[SUM] = Math.floor(Math.random() * (upperLimit - 2)) + 2
+	    wState[DIFFERENCE] = Math.round(Math.random() * wState[SUM])
+	    wState[IS_ADDING] = Boolean(Math.round(Math.random()))
+	  }
+	  subtrahend = (wState[SUM] - wState[DIFFERENCE]).toString()
+	  difference = wState[DIFFERENCE].toString()
+	  sum = wState[SUM].toString()
+	  if (wState[IS_ADDING]) {
+	    drawText(
+	      GRID,
+	      subtrahend,
+	      new Vector2(100, 200),
+	      wState[BRUSHES][1].color,
+	      120
+	    )
+	    drawText(
+	      GRID,
+	      '+',
+	      new Vector2(120 + 74.4 * subtrahend.length, 200),
+	      wState[BRUSHES][10].color,
+	      120
+	    )
+	    drawText(
+	      GRID,
+	      difference,
+	      new Vector2(214.4 + 74.4 * subtrahend.length, 200),
+	      wState[BRUSHES][2].color,
+	      120
+	    )
+	    drawText(
+	      GRID,
+	      '=',
+	      new Vector2(234.4 + 74.4 * (subtrahend.length + difference.length), 200),
+	      wState[BRUSHES][10].color,
+	      120
+	    )
+	  } else {
+	    drawText(
+	      GRID,
+	      sum,
+	      new Vector2(100, 200),
+	      wState[BRUSHES][1].color,
+	      120
+	    )
+	    drawText(
+	      GRID,
+	      '-',
+	      new Vector2(120 + 74.4 * sum.length, 200),
+	      wState[BRUSHES][10].color,
+	      120
+	    )
+	    drawText(
+	      GRID,
+	      difference,
+	      new Vector2(214.4 + 74.4 * sum.length, 200),
+	      wState[BRUSHES][2].color,
+	      120
+	    )
+	    drawText(
+	      GRID,
+	      '=',
+	      new Vector2(234.4 + 74.4 * (sum.length + difference.length), 200),
+	      wState[BRUSHES][10].color,
+	      120
+	    )
+	  }
+	  break
+	case 1:
+	  subtrahend = (wState[SUM] - wState[DIFFERENCE]).toString()
+	  difference = wState[DIFFERENCE].toString()
+	  sum = wState[SUM].toString()
+	  if (wState[IS_ADDING]) {
+	    drawText(
+	      GRID,
+	      sum,
+	      new Vector2(328.8 + 74.4 * (subtrahend.length + difference.length), 200),
+	      wState[BRUSHES][10].color,
+	      120
+	    )
+	  } else {
+	    drawText(
+	      GRID,
+	      subtrahend,
+	      new Vector2(328.8 + 74.4 * (sum.length + difference.length), 200),
+	      wState[BRUSHES][10].color,
+	      120
+	    )
+	  }
+	}
       }
 
       // Typing
@@ -3370,6 +3485,9 @@
 	   wState[PRINT_HEAD_LOCATION].x = wState[MOUSE_DOWN_LOCATION].x
 	   wState[PRINT_HEAD_LOCATION].y += wState[LINE_SPACING]
 	    drawTextCursor()
+	  } else if (mathProblemState > -1) {
+	    doMathProblem(mathProblemState = (mathProblemState + 1) % 2)
+	    mathProblemState === 0 && setGrid()
 	  }
 	}
       });
@@ -3523,7 +3641,7 @@
       let historyIndex = 0
       let currentMouseLocation = globalOrigin.copy()
       let marksHistory
-      layers[MARKS].globalAlpha = 1
+      let mathProblemState = -1
 
       const query = parseQueryString(window.location.href)
       const wState = {}
