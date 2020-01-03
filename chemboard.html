@@ -807,12 +807,14 @@
       const COMMITTED = 'COMMITTED'
       const COMMIT_RADIUS = 'COMMIT_RADIUS'
       
-      const MATH_PROBLEM_LIMIT = 'MATH_PROBLEM_LIMIT'
+      const MATH = 'MATH'
+      const READING = 'READING'
+      const PROBLEM_STATE = 'PROBLEM_STATE'
+      const PROBLEM_LIMITS = 'PROBLEM_LIMITS'
       const IS_ADDING = 'IS_ADDING'
       const SUM = 'SUM'
       const DIFFERENCE = 'DIFFERENCE'
       const DICTIONARY_WORD = 'DICTIONARY_WORD'
-      const WORD_LENGTH_LIMIT = 'WORD_LENGTH_LIMIT'
 
       const dom = {}
       dom[WALLPAPER] = document.getElementById(WALLPAPER)
@@ -1742,8 +1744,8 @@
       defaultState[MARKS_DATA] = 'untitled'
       defaultState[SAVED_MARKS_DATA] = {}
       defaultState[MARKS_HISTORY_LENGTH] = 50
-      defaultState[MATH_PROBLEM_LIMIT] = 10
-      defaultState[WORD_LENGTH_LIMIT] = 6
+      defaultState[PROBLEM_STATE] = new Vector2(-1, 0)
+      defaultState[PROBLEM_LIMITS] = [0, 10, 5]
 
       const updateMarksHistory = (dataURL=dom[MARKS].toDataURL('image/png')) => {
 	if (marksHistory.length < wState[MARKS_HISTORY_LENGTH]) {
@@ -2642,11 +2644,7 @@
 	    plotFunction(storedFunction.f, storedFunction.style, offset, true)
 	  }
 	}
-	if (mathProblemState > -1 && mathProblemState < 2) {
-	  doMathProblem(mathProblemState, wState[MATH_PROBLEM_LIMIT], true)
-	} else if (mathProblemState > 1) {
-	  doReadingProblem(mathProblemState, wState[WORD_LENGTH_LIMIT], true)
-	}
+	doExampleProblem(wState[PROBLEM_STATE], wState[PROBLEM_LIMITS][wState[PROBLEM_STATE].x], true, true)
 	return [
 	  [
 	    drawRectangularDotsGrid,
@@ -2920,126 +2918,60 @@
 	setGrid()
       }
 
-      const doMathProblem = (
-	problemState=mathProblemState, 
-	upperLimit=wState[MATH_PROBLEM_LIMIT], 
-	preserve=false
+      const doExampleProblem = (
+	problemState=wState[PROBLEM_STATE],
+	upperLimit=wState[PROBLEM_LIMITS][wState[PROBLEM_STATE].x],
+	preserveProblem=false,
+	preservePhase=false
       ) => {
-	let subtrahend
-	let difference
-	let sum
-	mathProblemState = problemState
-	wState[MATH_PROBLEM_LIMIT] = upperLimit
-	if (problemState > -1) {
-	  if (!preserve) {
+	if (!preservePhase) {
+	  setGrid()
+	}
+	wState[PROBLEM_STATE].x = (typeof problemState === 'string') 
+	  ? [MATH, READING].indexOf(problemState) + 1 
+	  : problemState.x
+	switch (wState[PROBLEM_STATE].x) {
+	case 1:
+	  if (!preserveProblem) {
 	    wState[SUM] = Math.floor(Math.random() * (upperLimit - 2)) + 2
 	    wState[DIFFERENCE] = Math.round(Math.random() * wState[SUM])
 	    wState[IS_ADDING] = Boolean(Math.round(Math.random()))
 	  }
-	  subtrahend = (wState[SUM] - wState[DIFFERENCE]).toString()
-	  difference = wState[DIFFERENCE].toString()
-	  sum = wState[SUM].toString()
+	  const figures = [
+	    (wState[SUM] - wState[DIFFERENCE]).toString(),
+	    wState[DIFFERENCE].toString(),
+	    wState[SUM].toString()
+	  ]
 	  if (wState[IS_ADDING]) {
-	    drawText(
-	      GRID,
-	      subtrahend,
-	      new Vector2(100, 200),
-	      wState[BRUSHES][1].color,
-	      120
-	    )
-	    drawText(
-	      GRID,
-	      '+',
-	      new Vector2(120 + 74.4 * subtrahend.length, 200),
-	      wState[BRUSHES][10].color,
-	      120
-	    )
-	    drawText(
-	      GRID,
-	      difference,
-	      new Vector2(214.4 + 74.4 * subtrahend.length, 200),
-	      wState[BRUSHES][2].color,
-	      120
-	    )
-	    drawText(
-	      GRID,
-	      '=',
-	      new Vector2(234.4 + 74.4 * (subtrahend.length + difference.length), 200),
-	      wState[BRUSHES][10].color,
-	      120
-	    )
+	    figures.splice(1, 0, '+')
 	  } else {
-	    drawText(
-	      GRID,
-	      sum,
-	      new Vector2(100, 200),
-	      wState[BRUSHES][1].color,
-	      120
-	    )
-	    drawText(
-	      GRID,
-	      '-',
-	      new Vector2(120 + 74.4 * sum.length, 200),
-	      wState[BRUSHES][10].color,
-	      120
-	    )
-	    drawText(
-	      GRID,
-	      difference,
-	      new Vector2(214.4 + 74.4 * sum.length, 200),
-	      wState[BRUSHES][2].color,
-	      120
-	    )
-	    drawText(
-	      GRID,
-	      '=',
-	      new Vector2(234.4 + 74.4 * (sum.length + difference.length), 200),
-	      wState[BRUSHES][10].color,
-	      120
-	    )
+	    figures.reverse()
+	    figures.splice(1, 0, '-')
 	  }
-	  if (problemState > 0) { 
-	    subtrahend = (wState[SUM] - wState[DIFFERENCE]).toString()
-	    difference = wState[DIFFERENCE].toString()
-	    sum = wState[SUM].toString()
-	    if (wState[IS_ADDING]) {
-	      drawText(
-		GRID,
-		sum,
-		new Vector2(328.8 + 74.4 * (subtrahend.length + difference.length), 200),
-		wState[BRUSHES][10].color,
-		120
-	      )
-	    } else {
-	      drawText(
-		GRID,
-		subtrahend,
-		new Vector2(328.8 + 74.4 * (sum.length + difference.length), 200),
-		wState[BRUSHES][10].color,
-		120
-	      )
-	    }
+	  figures.splice(3, 0, '=')
+	  figures.slice(
+	    0,
+	    [4, 5][wState[PROBLEM_STATE].y]
+	  ).forEach((figure, i) => {
+	    drawText(
+	      GRID,
+	      figure,
+	      new Vector2(100 + 94.4 * i, 200),
+	      wState[BRUSHES][[1, 2, 2, 10, 10][i]].color,
+	      120
+	    )
+	  })
+	  if (!preservePhase) {
+	    wState[PROBLEM_STATE].y = (wState[PROBLEM_STATE].y + 1) % 2
 	  }
-	} else {
-	  mathProblemState = 0
-	  doMathProblem(mathProblemState)
-	}
-      }
-
-      doReadingProblem = (
-	problemState=mathProblemState, 
-	limit=wState[WORD_LENGTH_LIMIT], 	
-	preserve=false
-      ) => {
-	mathProblemState = problemState
-	wState[WORD_LENGTH_LIMIT] = limit
-	if (problemState > 1) {
-	  if (!preserve) {
+	  break
+	case 2:
+	  if (!preserveProblem) {
 	    const word = dictionary[Math.floor(Math.random() * dictionary.length)]
-	    if (word.length <= wState[WORD_LENGTH_LIMIT]) {
+	    if (word.length <= upperLimit) {
 	      wState[DICTIONARY_WORD] = word
 	    } else {
-	      doReadingProblem(mathProblemState)
+	      doExampleProblem(wState[PROBLEM_STATE], wState[PROBLEM_LIMITS][wState[PROBLEM_STATE].x], false, true)
 	    }
 	  }
 	  drawText(
@@ -3049,28 +2981,28 @@
 	    wState[BRUSHES][10].color,
 	    120
 	  )
-	  if (mathProblemState > 2) {
+	  if (wState[PROBLEM_STATE].y === 1) {
 	    fetch(`https://www.dictionaryapi.com/api/v3/references/learners/json/${wState[DICTIONARY_WORD]}?key=6515d888-483b-4fb4-a753-0151d72dde64`)
-	      .then(response => {
+	      .then((response) => {
 		return response.json()
 	      })
-	      .then(data => {
-		// Work with JSON data here
+	      .then((data) => {
 		drawText(
 		  GRID,
-		  `\\${data[0].hwi.prs[0].ipa}\\`, //data[0].dros[Math.floor(Math.random() * data[0].dros.length)].drp,
+		  `/${data[0].hwi.prs[0].ipa}/`,
 		  new Vector2(100, 300),
 		  wState[BRUSHES][10].color,
 		  60
 		)
 	      })
-	      .catch(err => {
-		// Do something for an error here
+	      .catch((err) => {
+		console.error(err)
 	      })
 	  }
-	} else {
-	  mathProblemState = 2
-	  doReadingProblem(mathProblemState)
+	  if (!preservePhase) {
+	    wState[PROBLEM_STATE].y = (wState[PROBLEM_STATE].y + 1) % 2
+	  }
+	  break
 	}
       }
 
@@ -3356,8 +3288,17 @@
 	      wState[TOOL] = GRID
 	    }
 	    break
-	  }
-	
+	  case 'Enter':
+	    if (!isTyping) {
+	      doExampleProblem(
+		wState[PROBLEM_STATE],
+		wState[PROBLEM_LIMITS][wState[PROBLEM_STATE].x],
+		[false, true][wState[PROBLEM_STATE].y],
+		false
+	      )
+	    }
+	    break
+	  }	
 	}	
 	keyIsDown = true
       })
@@ -3536,24 +3477,11 @@
 	  }
 	  break
 	case 'Enter':
+	  // is point above line?
 	  if (isTyping) {
 	   wState[PRINT_HEAD_LOCATION].x = wState[MOUSE_DOWN_LOCATION].x
 	   wState[PRINT_HEAD_LOCATION].y += wState[LINE_SPACING]
 	    drawTextCursor()
-	  } else if (mathProblemState > -1 && mathProblemState < 2) {
-	    doMathProblem(
-	      mathProblemState = (mathProblemState + 1) % 2, 
-	      wState[MATH_PROBLEM_LIMIT], 
-	      [false, true][mathProblemState]
-	    )
-	    mathProblemState === 0 && setGrid()
-	  } else if (mathProblemState > 1) {
-	    doReadingProblem(
-	      mathProblemState = ((mathProblemState + 1) % 2) + 2,
-	      wState[WORD_LENGTH_LIMIT],
-	      [false, true][mathProblemState - 2]
-	    )
-	    mathProblemState === 2 && setGrid()
 	  }
 	}
       })
@@ -3707,7 +3635,6 @@
       let historyIndex = 0
       let currentMouseLocation = globalOrigin.copy()
       let marksHistory
-      let mathProblemState = -1
 
       const query = parseQueryString(window.location.href)
       const wState = {}
@@ -3751,6 +3678,7 @@
       wState[OVERLAY_COLOR] = new Color(wState[OVERLAY_COLOR])
       wState[GRID_COLOR] = new Color(wState[GRID_COLOR])
       wState[GRID_TYPE] = new Vector2(wState[GRID_TYPE])
+      wState[PROBLEM_STATE] = new Vector2(0, 0)
       wState[TIME_PADDING] = new Vector2(wState[TIME_PADDING])
       wState[RECTANGULAR_OFFSET] = new Vector2(wState[RECTANGULAR_OFFSET])
       wState[CALENDAR_OFFSET] = wState[RECTANGULAR_OFFSET].copy()
