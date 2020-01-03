@@ -1744,7 +1744,7 @@
       defaultState[MARKS_DATA] = 'untitled'
       defaultState[SAVED_MARKS_DATA] = {}
       defaultState[MARKS_HISTORY_LENGTH] = 50
-      defaultState[PROBLEM_STATE] = new Vector2(-1, 0)
+      defaultState[PROBLEM_STATE] = new Vector2(-1, 1)
       defaultState[PROBLEM_LIMITS] = [0, 10, 5]
 
       const updateMarksHistory = (dataURL=dom[MARKS].toDataURL('image/png')) => {
@@ -2636,6 +2636,7 @@
       const getGridCoefficient = (pixels, factor=3) => Math.pow(10, 1 - Math.floor(Math.log10(pixels / factor)))
       
       const drawGrid = (type, offset) => {
+	doExampleProblem(wState[PROBLEM_STATE], wState[PROBLEM_LIMITS][wState[PROBLEM_STATE].x], true, true)
 	if (type.x === 0) {
 	  return
 	}
@@ -2644,7 +2645,6 @@
 	    plotFunction(storedFunction.f, storedFunction.style, offset, true)
 	  }
 	}
-	doExampleProblem(wState[PROBLEM_STATE], wState[PROBLEM_LIMITS][wState[PROBLEM_STATE].x], true, true)
 	return [
 	  [
 	    drawRectangularDotsGrid,
@@ -2695,6 +2695,7 @@
 	    hoursElement.style.display = daysElement.style.display = 'none'
 	    wState[GRID_TYPE].setCoordinates(0, type.y)
 	    setWhiteboardState(GRID_TYPE)
+	    drawGrid(type)
 	  } else {
 	    drawGrid(type, {
 	      rectangular: wState[RECTANGULAR_OFFSET],
@@ -2863,7 +2864,7 @@
 	      wState[GRID_COLOR],
 	      16
 	    )
-	   plotHeadLocation.x += labelIntervals.x
+	    plotHeadLocation.x += labelIntervals.x
 	  }
 	  while (plotHeadLocation.y < wState[BOARD_SIZE].y) {
 	    const content = coefficients.y >= 1 
@@ -2921,15 +2922,19 @@
       const doExampleProblem = (
 	problemState=wState[PROBLEM_STATE],
 	upperLimit=wState[PROBLEM_LIMITS][wState[PROBLEM_STATE].x],
-	preserveProblem=false,
-	preservePhase=false
+	preserveProblem=true,
+	preservePhase=true
       ) => {
 	if (!preservePhase) {
+	  wState[PROBLEM_STATE].y = (wState[PROBLEM_STATE].y + 1) % 2
+	}
+	if (typeof problemState === 'string') {
+	  wState[PROBLEM_STATE].setCoordinates([MATH, READING].indexOf(problemState) + 1, 0)
+	  setGrid()
+	} else if (typeof problemState === 'number') {
+	  wState[PROBLEM_STATE].setCoordinates(problemState, 0)
 	  setGrid()
 	}
-	wState[PROBLEM_STATE].x = (typeof problemState === 'string') 
-	  ? [MATH, READING].indexOf(problemState) + 1 
-	  : problemState.x
 	switch (wState[PROBLEM_STATE].x) {
 	case 1:
 	  if (!preserveProblem) {
@@ -2961,9 +2966,6 @@
 	      120
 	    )
 	  })
-	  if (!preservePhase) {
-	    wState[PROBLEM_STATE].y = (wState[PROBLEM_STATE].y + 1) % 2
-	  }
 	  break
 	case 2:
 	  if (!preserveProblem) {
@@ -2987,6 +2989,7 @@
 		return response.json()
 	      })
 	      .then((data) => {
+		console.log('wState[PROBLEM_STATE].y: ', wState[PROBLEM_STATE].y)
 		drawText(
 		  GRID,
 		  `/${data[0].hwi.prs[0].ipa}/`,
@@ -2999,10 +3002,10 @@
 		console.error(err)
 	      })
 	  }
-	  if (!preservePhase) {
-	    wState[PROBLEM_STATE].y = (wState[PROBLEM_STATE].y + 1) % 2
-	  }
 	  break
+	}
+	if (!preservePhase) {
+	  setGrid()
 	}
       }
 
@@ -3293,7 +3296,7 @@
 	      doExampleProblem(
 		wState[PROBLEM_STATE],
 		wState[PROBLEM_LIMITS][wState[PROBLEM_STATE].x],
-		[false, true][wState[PROBLEM_STATE].y],
+		[true, false][wState[PROBLEM_STATE].y],
 		false
 	      )
 	    }
