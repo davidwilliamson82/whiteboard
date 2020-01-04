@@ -58,7 +58,7 @@
     </div>
     <canvas id="PALETTE" style="position: fixed; left: 0px; top: 0px; z-index: 8;"></canvas>
     <div id="SENSOR" style="position: absolute; left: 0px; top: 0px; z-index: 9;"></div>
-    
+    <audio id='AUDIO'></audio>
     <script>
       // CLASSES
       class Color {
@@ -757,6 +757,7 @@
       const CLOCK_ANGLES = 'CLOCK_ANGLES'
       const MARKS = 'MARKS'
       const SENSOR = 'SENSOR'
+      const AUDIO = 'AUDIO'
 
       const DOCUMENT_TITLE = 'DOCUMENT_TITLE' // String
       const SCREEN_SIZE = 'SCREEN_SIZE' // Vector2 *
@@ -827,6 +828,7 @@
       hoursElement = document.getElementById(HOURS)
       dom[MARKS] = document.getElementById(MARKS)
       dom[SENSOR] = document.getElementById(SENSOR)
+      dom[AUDIO] = document.getElementById(AUDIO)
       
       const layers = {}
       layers[PALETTE] = dom[PALETTE].getContext('2d')
@@ -1688,7 +1690,7 @@
 	236531
       ]
 
-      const dictionary = ['abandon','ability','able','about','above','abroad','absence','absent','absolute','abstract','abuse','abusive','academic','accept','acceptable','acceptance','access','accident','accompany','according+to','account','accountant','accurate','baby','back','backward','bacterium','bad','badly','bag','baggage','bake','balance','ball','band','bandage','bang','bank','banker','bankrupt','bankruptcy','cage','cake','calculate','calculation','calendar','call','calm','camera','camp','campaign','campus','can','cancel','cancer','candidate','candy','cap','capable','capacity','capital','captain','capture','car','dad','daily','dam','damage','damp','dance','danger','dangerous','dare','dark','data','date','daughter','dawn','day','dead','deaf','deal','dear','death','e-mail','each','eager','ear','earlier','earlobe','early','earn','earth','ease','east','easy','easygoing','eat','economic','economics','economist','economy','edge','edit','edition','fabric','face','fact','factor','factory','faculty','fail','failure','faint','fair','faith','fake','fall','false','fame','familiar','family','famous','fan','fancy','far','gain','gallon','game','gap','garage','garbage','garden','gas','gate','gather','gay','gear','gender','gene','general','generally','generate','generation','generosity','generous','gentle','gentleman','genuine','geography','get','giant','habit','hail','hair','half','hammer','hand','handle','handsome','handwriting','hang','happen','happy','harbor','hard','hardly','hardware','harm','harsh','harvest','hat','ice','idea','ideal','identical','identification','identify','identity','if','ignore','ill','illegal','illness','illustrate','image','imaginary','imagination','imaginative','imagine','imitate','immediate','immigrant','immoral','impact','impatience','impatient','import','jacket','jail','jam','jar','jaw','jealous','jealousy','jelly','jet','jewel','jeweler','jewelry','job','join','joint','joke','journal','journey','joy','judge','judgment','juice','jump','keen','keep','key','kick','kid','kill','kind','kindness','king','kingdom','kiss','kitchen','knee','kneel','knife','knit','knock','knot','know','knowledge','knuckle','label','labor','laboratory','lack','ladder','lady','lake','lamp','land','landlord','lane','language','large','last','late','lately','latter','laugh','machine','mad','magazine','magic','mail','main','maintain','major','majority','make','male','malice','man','manage','management','manager','manner','manufacture','many','map','march','margin','mark','nail','naked','name','narrow','nation','national','native','natural','naturally','nature','nausea','navy','near','nearby','nearly','neat','necessary','neck','need','needle','negative','negligence','negligent','neighbor','object','objection','objective','observation','observe','obsessive','obtain','obvious','occasion','occasionally','occupation','occupy','occur','ocean','odd','odor','of','off','offend','offense','offensive','offer','p.m.','pace','pack','package','pad','page','pain','painful','paint','painter','painting','pair','pale','palm','pan','panel','panic','pants','paper','parade','paragraph','parallel','paraphrase','parent','park','parliament','qualification','qualify','quality','quantity','quarter','quarterly','queen','question','quick','quiet','quit','quite','quiz','quotation','quote','race','racial','radical','radio','rage','rail','railroad','rain','raise','range','rank','rapid','rare','rarely','rash','rate','rather','ratio','rational','raw','reach','react','sacrifice','sad','sadness','safe','safety','sail','sake','salad','salary','sale','salesman','salesperson','saleswoman','salt','same','sample','sand','sandwich','sarcastic','satisfaction','satisfy','sauce','save','savings','say','scale','scalp','table','tactful','tactless','tail','take','talent','talk','tall','tank','tap','tape','target','task','taste','tax','tea','teach','teacher','team','tear','technical','technique','ugly','umbrella','umpire','unable','uncle','under','undergo','undergraduate','underground','underneath','understand','understanding','undertake','undertaker','undo','unemployed','unemployment','unfortunate','unfortunately','unhappiness','unhappy','uniform','union','unique','unit','unite','vacation ','vagina','valley','valuable','value','variation','variety','various','vary','vast','vegetable','vehicle','verb','verdict','version','very','vessel','veterinarian','victim','victory','video','videographer','view','village','violence','violent','wage','waist','wait','waiter','waiting room','waitress','wake','walk','wall','wallet','wander','want','war','warm','warm front','warmth','warn','warning','wash','waste','watch','water','wave','wax','yard','yawn','year','yearly','yell','yellow','yes','yesterday','yet','you','young','your','yours','yourself','youth','zero','zone','zoo']
+      const dictionary = ['abandon','ability','able','about','above','abroad','absence','absent','absolute','abstract','abuse','abusive','academic','accept','acceptable','acceptance','access','accident','accompany','according+to','account','accountant','accurate','baby','back','backward','bacterium','bad','badly','bag','baggage','bake','balance','ball','band','bandage','bang','bank','banker','bankrupt','bankruptcy','cage','cake','calculate','calculation','calendar','call','calm','camera','camp','campaign','campus','can','cancel','cancer','candidate','candy','cap','capable','capacity','capital','captain','capture','car','dad','daily','dam','damage','damp','dance','danger','dangerous','dare','dark','data','date','daughter','dawn','day','dead','deaf','deal','dear','death','e-mail','each','eager','ear','earlier','earlobe','early','earn','earth','ease','east','easy','easygoing','eat','economic','economics','economist','economy','edge','edit','edition','fabric','face','fact','factor','factory','faculty','fail','failure','faint','fair','faith','fake','fall','false','fame','familiar','family','famous','fan','fancy','far','gain','gallon','game','gap','garage','garbage','garden','gas','gate','gather','gay','gear','gender','gene','general','generally','generate','generation','generosity','generous','gentle','gentleman','genuine','geography','get','giant','habit','hail','hair','half','hammer','hand','handle','handsome','handwriting','hang','happen','happy','harbor','hard','hardly','hardware','harm','harsh','harvest','hat','ice','idea','ideal','identical','identification','identify','identity','if','ignore','ill','illegal','illness','illustrate','image','imaginary','imagination','imaginative','imagine','imitate','immediate','immigrant','immoral','impact','impatience','impatient','import','jacket','jail','jam','jar','jaw','jealous','jealousy','jelly','jet','jewel','jeweler','jewelry','job','join','joint','joke','journal','journey','joy','judge','judgment','juice','jump','keen','keep','key','kick','kid','kill','kind','kindness','king','kingdom','kiss','kitchen','knee','kneel','knife','knit','knock','knot','know','knowledge','knuckle','label','labor','laboratory','lack','ladder','lady','lake','lamp','land','landlord','lane','language','large','last','late','lately','latter','laugh','machine','mad','magazine','magic','mail','main','maintain','major','majority','make','male','malice','man','manage','management','manager','manner','manufacture','many','map','march','margin','mark','nail','naked','name','narrow','nation','national','native','natural','naturally','nature','nausea','navy','near','nearby','nearly','neat','necessary','neck','need','needle','negative','negligence','negligent','neighbor','object','objection','objective','observation','observe','obsessive','obtain','obvious','occasion','occasionally','occupation','occupy','occur','ocean','odd','odor','of','off','offend','offense','offensive','offer','pace','pack','package','pad','page','pain','painful','paint','painter','painting','pair','pale','palm','pan','panel','panic','pants','paper','parade','paragraph','parallel','paraphrase','parent','park','parliament','qualification','qualify','quality','quantity','quarter','quarterly','queen','question','quick','quiet','quit','quite','quiz','quotation','quote','race','racial','radical','radio','rage','rail','railroad','rain','raise','range','rank','rapid','rare','rarely','rash','rate','rather','ratio','rational','raw','reach','react','sacrifice','sad','sadness','safe','safety','sail','sake','salad','salary','sale','salesman','salesperson','saleswoman','salt','same','sample','sand','sandwich','sarcastic','satisfaction','satisfy','sauce','save','savings','say','scale','scalp','table','tactful','tactless','tail','take','talent','talk','tall','tank','tap','tape','target','task','taste','tax','tea','teach','teacher','team','tear','technical','technique','ugly','umbrella','umpire','unable','uncle','under','undergo','undergraduate','underground','underneath','understand','understanding','undertake','undertaker','undo','unemployed','unemployment','unfortunate','unfortunately','unhappiness','unhappy','uniform','union','unique','unit','unite','vacation ','vagina','valley','valuable','value','variation','variety','various','vary','vast','vegetable','vehicle','verb','verdict','version','very','vessel','veterinarian','victim','victory','video','videographer','view','village','violence','violent','wage','waist','wait','waiter','waiting room','waitress','wake','walk','wall','wallet','wander','want','war','warm','warm front','warmth','warn','warning','wash','waste','watch','water','wave','wax','yard','yawn','year','yearly','yell','yellow','yes','yesterday','yet','you','young','your','yours','yourself','youth','zero','zone','zoo']
     
       const colorWheelSideLength = 400
 
@@ -2965,13 +2967,14 @@
 	    0,
 	    [4, 5][wState[PROBLEM_STATE].y]
 	  ).forEach((figure, i) => {
-	    figureX += 90 * (i > 0 ? figures[i - 1].length : 0)
+	    numeralSize = 60 + 60 / upperLimit.toString().length
+	    figureX += numeralSize * 0.62 * (i > 0 ? figures[i - 1].length : 0) + numeralSize * 3 / 24
 	    drawText(
 	      GRID,
 	      figure,
 	      new Vector2(figureX, 200),
 	      wState[BRUSHES][[1, 2, 2, 10, 10][i]].color,
-	      120
+	      numeralSize
 	    )
 	  })
 	  break
@@ -2991,12 +2994,14 @@
 	    wState[BRUSHES][10].color,
 	    120
 	  )
-	  if (wState[PROBLEM_STATE].y === 1) {
+	  if (wState[PROBLEM_STATE].y === 1 && preservePhase) {
 	    fetch(`https://www.dictionaryapi.com/api/v3/references/learners/json/${wState[DICTIONARY_WORD]}?key=6515d888-483b-4fb4-a753-0151d72dde64`)
 	      .then((response) => {
 		return response.json()
 	      })
 	      .then((data) => {
+		dom[AUDIO].src = `https://media.merriam-webster.com/soundc11/${wState[DICTIONARY_WORD][0]}/${data[0].hwi.prs[0].sound.audio}.wav`
+		dom[AUDIO].play()
 		drawText(
 		  GRID,
 		  `/${data[0].hwi.prs[0].ipa}/`,
@@ -3006,7 +3011,13 @@
 		)
 	      })
 	      .catch((err) => {
-		console.error(err)
+		drawText(
+		  GRID,
+		  'ERROR! :(',
+		  new Vector2(100, 300),
+		  wState[BRUSHES][10].color,
+		  60
+		)
 	      })
 	  }
 	  break
