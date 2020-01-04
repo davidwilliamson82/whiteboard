@@ -1746,6 +1746,10 @@
       defaultState[MARKS_HISTORY_LENGTH] = 50
       defaultState[PROBLEM_STATE] = new Vector2(-1, 1)
       defaultState[PROBLEM_LIMITS] = [0, 10, 5]
+      defaultState[SUM] = defaultState[PROBLEM_LIMITS][1]
+      defaultState[DIFFERENCE] = Math.floor(defaultState[SUM] / 2)
+      defaultState[IS_ADDING] = true
+      defaultState[DICTIONARY_WORD] = 'apple'
 
       const updateMarksHistory = (dataURL=dom[MARKS].toDataURL('image/png')) => {
 	if (marksHistory.length < wState[MARKS_HISTORY_LENGTH]) {
@@ -2925,6 +2929,8 @@
 	preserveProblem=true,
 	preservePhase=true
       ) => {
+	wState[PROBLEM_LIMITS][wState[PROBLEM_STATE].x] = upperLimit
+	setWhiteboardState(PROBLEM_LIMITS, wState[PROBLEM_LIMITS])
 	if (!preservePhase) {
 	  wState[PROBLEM_STATE].y = (wState[PROBLEM_STATE].y + 1) % 2
 	}
@@ -2954,14 +2960,16 @@
 	    figures.splice(1, 0, '-')
 	  }
 	  figures.splice(3, 0, '=')
+	  let figureX = 100
 	  figures.slice(
 	    0,
 	    [4, 5][wState[PROBLEM_STATE].y]
 	  ).forEach((figure, i) => {
+	    figureX += 90 * (i > 0 ? figures[i - 1].length : 0)
 	    drawText(
 	      GRID,
 	      figure,
-	      new Vector2(100 + 94.4 * i, 200),
+	      new Vector2(figureX, 200),
 	      wState[BRUSHES][[1, 2, 2, 10, 10][i]].color,
 	      120
 	    )
