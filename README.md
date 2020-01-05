@@ -75,7 +75,7 @@ QUERY PARAMETERS: <br />
 &nbsp;&nbsp;problem-image<br />
 &nbsp;&nbsp;marks-data<br />
 &nbsp;&nbsp;fill-active<br />
-<br 
+<br />
 HELPFUL FUNCTIONS: <br />
 &nbsp;&nbsp;doExampleProblem(subject, upperLimit) // subject is either MATH or READING<br />
 &nbsp;&nbsp;reading problems hit Merriam-Webster api https://dictionaryapi.com/products/api-learners-dictionary<br />
