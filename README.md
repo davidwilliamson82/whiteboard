@@ -79,5 +79,5 @@ QUERY PARAMETERS: <br />
 HELPFUL FUNCTIONS: <br />
 &nbsp;&nbsp;doExampleProblem(subject, upperLimit) // subject is either MATH or READING<br />
 &nbsp;&nbsp;reading problems hit Merriam-Webster api https://dictionaryapi.com/products/api-learners-dictionary<br />
-&nbsp;&nbsp;straightenGrid() will square the rectangular offset, set the hex grid to a 30 degree increment, and center the vanishing point.<br />
-&nbsp;&nbsp;toggleWallpaperStyle() will make the wallpaper image cover the whole board, and sets it's backgroundAttachment to 'scroll'<br />
+&nbsp;&nbsp;straightenGrid() squares rectangular offset, straightens hex angle, centers vanishing point.<br />
+&nbsp;&nbsp;toggleWallpaperStyle() Makes wallpaper bigger, and scrollable<br />
