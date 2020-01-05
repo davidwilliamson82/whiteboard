@@ -16,6 +16,9 @@ If all you want to use is the whiteboard, **just download the index.html** and o
 I like to use New Tab Redirect, along with a query parameter, specifying the name of the marks-data I am using.<br />
 https://chrome.google.com/webstore/detail/new-tab-redirect/icpgjfneehieebagbmdbhnlpiopdcmna?hl=en-US<br />
 <br />
+Photos are provided by Unsplash https://source.unsplash.com/
+<br />
+<br />
 Here is a Youtube tutorial.<br />
 https://www.youtube.com/embed/2RI41DfeWuQ<br />
 <br />
@@ -61,7 +64,7 @@ Arrow Keys: <br />
 &nbsp;&nbsp;Down constrains to lines to and away from the vanishing point<br />
 &nbsp;&nbsp;Right constrains to arcs about the vanishing point<br />
 &nbsp;&nbsp;Forward Slash constrainst to lines parallel to the most recent line made with the paintbrush in committed constraint<br />
-&nbsp;&nbsp;<br />
+<br />
 QUERY PARAMETERS: <br />
 &nbsp;&nbsp;document-title<br />
 &nbsp;&nbsp;screen-size<br />
@@ -72,3 +75,9 @@ QUERY PARAMETERS: <br />
 &nbsp;&nbsp;problem-image<br />
 &nbsp;&nbsp;marks-data<br />
 &nbsp;&nbsp;fill-active<br />
+<br 
+HELPFUL FUNCTIONS: <br />
+&nbsp;&nbsp;doExampleProblem(subject, upperLimit) // subject is either MATH or READING<br />
+&nbsp;&nbsp;reading problems hit Merriam-Webster api https://dictionaryapi.com/products/api-learners-dictionary<br />
+&nbsp;&nbsp;straightenGrid() will square the rectangular offset, set the hex grid to a 30 degree increment, and center the vanishing point.<br />
+&nbsp;&nbsp;toggleWallpaperStyle() will make the wallpaper image cover the whole board, and sets it's backgroundAttachment to 'scroll'<br />
