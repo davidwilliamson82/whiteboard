@@ -2564,12 +2564,22 @@
 	      5, 
 	      wState[GRID_COLOR]
 	    )
-	    drawCircle(
-	      clockCenter,
-	      clockRadius,
-	      wState[GRID_COLOR],
-	      false
-	    )
+
+	    const center = getCenter()
+	    let headAngle = Math.PI * 81/ 480
+	    while (headAngle < Math.PI * 2) {
+	      const path = document.createElementNS(svgNameSpace, 'path')
+	      const headPixels = center.add(new Vector2({ magnitude: clockRadius, angle: headAngle }))
+	      const endPixels = center.add(new Vector2({ magnitude: clockRadius, angle: headAngle + Math.PI * 79 / 240 }))
+	      const bigArc = (endPixels.getAngle(center) - headPixels.getAngle(center) + (Math.PI * 2)) % (Math.PI * 2) > Math.PI ? 1 : 0
+	      path.setAttribute('fill', 'none')
+	      path.setAttribute('d', `M${headPixels.x},${headPixels.y} A ${clockRadius} ${clockRadius} 0 ${bigArc} 1 ${endPixels.x} ${endPixels.y}`)
+	      path.setAttribute('stroke', wState[GRID_COLOR].getRgba())
+	      path.setAttribute('stroke-width', '2px')
+	      layers[GRID].appendChild(path)
+	      headAngle += Math.PI / 3
+	    }
+
 	    date = new Date
 	    const hourAngle = (Math.PI * (((date.getHours() % 12) / 6) + (date.getMinutes() / 360))) - Math.PI / 2
 	    const minuteAngle = (Math.PI * (((date.getMinutes()) / 30) + (date.getSeconds() / 1800))) - Math.PI / 2
