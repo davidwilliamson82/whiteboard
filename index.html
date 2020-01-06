@@ -269,7 +269,7 @@
 	      }))
 	    } else {
 	      Object.assign(this, new Vector2({ 
-		magnitude: magnitude.getMagnitude() * wState[HEX_MAGNITUDE],
+		magnitude: magnitude.length() * wState[HEX_MAGNITUDE],
 		angle: magnitude.getAngle()
 	      }))
 	    }
@@ -296,7 +296,7 @@
 	}
 
 	getCircumference () {
-	  return this.getAngle() * this.getMagnitude()
+	  return this.getAngle() * this.length()
 	}
 
 	getCalendarDays () {
@@ -341,7 +341,7 @@
 	  return new Vector2(this.x * s.x, this.y * s.y)
 	}
 
-	getMagnitude (v) {
+	length (v) {
 	  if (!v) {
 	    v = new Vector2(0, 0)
 	  }
@@ -397,12 +397,12 @@
 	getPolarCoordinates () {
 	  return {
 	    angle: this.getAngle(),
-	    magnitude: this.getMagnitude()
+	    magnitude: this.length()
 	  }
 	}
 
 	setMagnitude (scale=1) {
-	  return this.scale(1/this.getMagnitude()).scale(scale)
+	  return this.scale(1/this.length()).scale(scale)
 	}
 
 	transform (matrix) {
@@ -567,7 +567,7 @@
 	  sideLength * 7 / 16, 
 	  sideLength * 7 / 16
 	)
-	const distance = pixelLocation.getMagnitude(wheelCenter)
+	const distance = pixelLocation.length(wheelCenter)
 	let { hue, sat, lum, alpha } = color
 	if (distance <= sideLength * 7 / 16) {
 	  if(distance > sideLength * 1 / 16) {
@@ -944,13 +944,13 @@
 	  let content
 	  switch (gridType.x) {
 	  case 0:
-	    content = `${toolLocation.getMagnitude(mouseDown).toFixed(0)}px`
+	    content = `${toolLocation.length(mouseDown).toFixed(0)}px`
 	    break
 	  case 1:
 	    content = `(${(toolLocation.getRectangularOffset().x - mouseDown.getRectangularOffset().x).toFixed(2)}, ${(mouseDown.getRectangularOffset().y - toolLocation.getRectangularOffset().y).toFixed(2)})`
 	    break
 	  case 2:
-	    content = `${(toolLocation.getHexOffset().getMagnitude(mouseDown.getHexOffset())).toFixed(2)}, ${(((Math.PI * 2) - toolLocation.getAngle(mouseDown)) * 180 / Math.PI).toFixed(0)}°`
+	    content = `${(toolLocation.getHexOffset().length(mouseDown.getHexOffset())).toFixed(2)}, ${(((Math.PI * 2) - toolLocation.getAngle(mouseDown)) * 180 / Math.PI).toFixed(0)}°`
 	    break
 	  case 3:
 	    switch (gridType.y) {
@@ -974,7 +974,7 @@
 	    offset.angle = toolLocation.getAngle(getCenter())
 	    offset.location = new Vector2({
 	      angle: toolLocation.getAngle(getCenter()),
-	      magnitude: mouseDown.getMagnitude(getCenter())
+	      magnitude: mouseDown.length(getCenter())
 	    }).add(getCenter())
 	  } else {
 	    offset.angle = toolLocation.getAngle(mouseDown)
@@ -1030,7 +1030,7 @@
 	mouseMove: (toolLocation) => {
 	  const offset = new Vector2(toolLocation.x, toolLocation.y)
 	  if (mouseIsDown 
-	    && toolLocation.getMagnitude(wState[MOUSE_DOWN_LOCATION]) > wState[COMMIT_RADIUS]
+	    && toolLocation.length(wState[MOUSE_DOWN_LOCATION]) > wState[COMMIT_RADIUS]
 	    && constraints[constraint](toolLocation)) {
 	    if (wState[ANGLE] === null) {
 	      setWhiteboardState(ANGLE, toolLocation.getAngle(wState[MOUSE_DOWN_LOCATION]))
@@ -1251,7 +1251,7 @@
 	  clearLayer(TOOLS, true)
 	  if (wState[GRID_TYPE].x === 3 && wState[GRID_TYPE].y === 2) {
 	    const center = getCenter()
-	    const radius = wState[MOUSE_DOWN_LOCATION].getMagnitude(center)
+	    const radius = wState[MOUSE_DOWN_LOCATION].length(center)
 	    const end = constrainArc(center, wState[MOUSE_DOWN_LOCATION], toolLocation)
 	    const measurementElement = document.createElementNS(svgNameSpace, 'path')
 	    const bigArc = (toolLocation.getAngle(center) - wState[MOUSE_DOWN_LOCATION].getAngle(center) + (Math.PI * 2)) % (Math.PI * 2) > Math.PI ? 1 : 0
@@ -1299,7 +1299,7 @@
 	    ][wState[GRID_TYPE].y]
 	  ][wState[GRID_TYPE].x]
 	  if (wState[GRID_TYPE].x !== 3) {
-	    const distance = downOffset.getMagnitude(upOffset)
+	    const distance = downOffset.length(upOffset)
 	    console.log(`measurements:\n  angle: ${(angle * 180 / Math.PI).toFixed(0)}°\n  distance: ${distance.toFixed(2)}`)
 	  } else {
 	    switch (wState[GRID_TYPE].y) {
@@ -1443,14 +1443,14 @@
       tools[GRID] = {
 	mouseDown: (toolLocation) => {},
 	mouseMove: (toolLocation) => {
-	  if (toolLocation.getMagnitude(wState[VANISHING_POINT]) > 10) {
+	  if (toolLocation.length(wState[VANISHING_POINT]) > 10) {
 	    const offset = {
 	      rectangular: new Vector2(
 		(toolLocation.x - wState[VANISHING_POINT].x) / (wState[MOUSE_DOWN_LOCATION].x - wState[VANISHING_POINT].x),
 		(toolLocation.y - wState[VANISHING_POINT].y) / (wState[MOUSE_DOWN_LOCATION].y - wState[VANISHING_POINT].y)
 	      ),
 	      hex: {
-		magnitude: toolLocation.getMagnitude(wState[VANISHING_POINT]) / wState[MOUSE_DOWN_LOCATION].getMagnitude(wState[VANISHING_POINT]),
+		magnitude: toolLocation.length(wState[VANISHING_POINT]) / wState[MOUSE_DOWN_LOCATION].length(wState[VANISHING_POINT]),
 		angle: toolLocation.getAngle(wState[VANISHING_POINT]) - wState[MOUSE_DOWN_LOCATION].getAngle(wState[VANISHING_POINT])
 	      }
 	    }
@@ -1470,14 +1470,14 @@
 	  }
 	},
 	mouseUp: (toolLocation) => {
-	  if (toolLocation.getMagnitude(wState[VANISHING_POINT]) > 10) {
+	  if (toolLocation.length(wState[VANISHING_POINT]) > 10) {
 	    const offset = {
 	      rectangular: new Vector2(
 		(toolLocation.x - wState[VANISHING_POINT].x) / (wState[MOUSE_DOWN_LOCATION].x - wState[VANISHING_POINT].x),
 		(toolLocation.y - wState[VANISHING_POINT].y) / (wState[MOUSE_DOWN_LOCATION].y - wState[VANISHING_POINT].y)
 	      ),
 	      hex: {
-		magnitude: toolLocation.getMagnitude(wState[VANISHING_POINT]) / wState[MOUSE_DOWN_LOCATION].getMagnitude(wState[VANISHING_POINT]),
+		magnitude: toolLocation.length(wState[VANISHING_POINT]) / wState[MOUSE_DOWN_LOCATION].length(wState[VANISHING_POINT]),
 		angle: toolLocation.getAngle(wState[VANISHING_POINT]) - wState[MOUSE_DOWN_LOCATION].getAngle(wState[VANISHING_POINT])
 	      }
 	    }
@@ -1974,8 +1974,8 @@
 	  })
 	} = options
 	const headIntervals = new Vector2(
-	  offset.getMagnitude() * Math.sqrt(3),
-	  offset.getMagnitude()
+	  offset.length() * Math.sqrt(3),
+	  offset.length()
 	)
 	let head = new Vector2(
 	  (origin.x % headIntervals.x) - headIntervals.x,
@@ -2015,8 +2015,8 @@
 	} = options
       
 	const headIntervals = new Vector2(
-	  offset.getMagnitude() * Math.sqrt(3),
-	  offset.getMagnitude() * 3
+	  offset.length() * Math.sqrt(3),
+	  offset.length() * 3
 	)
 	let head = new Vector2(
 	  (origin.x % headIntervals.x) - headIntervals.x,
@@ -2171,7 +2171,7 @@
 	    )
 	  }
 	  head = projection.copy()
-	    .add(unitVector.scale((Math.round((projection.getMagnitude(wState[VANISHING_POINT]) / lines.spacing)) % 2) / 2))
+	    .add(unitVector.scale((Math.round((projection.length(wState[VANISHING_POINT]) / lines.spacing)) % 2) / 2))
 	    .add(unitVector.scale(offset))
 
 	  if (
@@ -2180,16 +2180,16 @@
 	  ) {
 	    head = head
 	      .add(unitVector.scale(Math.floor(
-		head.getMagnitude(line.start) / magnitude
+		head.length(line.start) / magnitude
 	      )))
 	  } else {
 	    head = head
 	      .add(unitVector.scale(-Math.ceil(
-		head.getMagnitude(line.start) / magnitude
+		head.length(line.start) / magnitude
 	      )))
 	  }
 
-	  while (head.getMagnitude(line.start) <= (line.end.getMagnitude(line.start) + magnitude * 2)) {
+	  while (head.length(line.start) <= (line.end.length(line.start) + magnitude * 2)) {
 	    dots.push(head)
 	    head = head.add(unitVector)
 	  }
@@ -2219,8 +2219,8 @@
 	  })
 	} = options
 	
-	const lines = getLinesGrid(offset.getAngle(), Math.sin(Math.PI / 3) * offset.getMagnitude())
-	const allDots = getDots(lines, offset.getMagnitude())
+	const lines = getLinesGrid(offset.getAngle(), Math.sin(Math.PI / 3) * offset.length())
+	const allDots = getDots(lines, offset.length())
 	for (let dots of allDots) {
 	  for (let dot of dots) {
 	    drawCircle(
@@ -2240,8 +2240,8 @@
 	    angle: wState[HEX_ANGLE] 
 	  })
 	} = options
-	const lines = getLinesGrid(offset.getAngle(), Math.sin(Math.PI / 3) * offset.getMagnitude())
-	const allDots = getDots(lines, offset.getMagnitude() * 3, 2 / 3)
+	const lines = getLinesGrid(offset.getAngle(), Math.sin(Math.PI / 3) * offset.length())
+	const allDots = getDots(lines, offset.length() * 3, 2 / 3)
 	for (let i in lines.lines) {
 	  for (let dot of allDots[i]) {
 	    drawLine(
@@ -2271,8 +2271,8 @@
 	    angle: wState[HEX_ANGLE] 
 	  })
 	} = options
-	const lines = getLinesGrid(offset.getAngle(), Math.sin(Math.PI / 3) * offset.getMagnitude())
-	const allDots = getDots(lines, offset.getMagnitude())
+	const lines = getLinesGrid(offset.getAngle(), Math.sin(Math.PI / 3) * offset.length())
+	const allDots = getDots(lines, offset.length())
 	for (let i in lines.lines) {
 	  for (let dot of allDots[i]) {
 	    drawLine(
@@ -2304,8 +2304,8 @@
 	} = options
       
 	const headIntervals = new Vector2(
-	  offset.getMagnitude() * Math.sqrt(3),
-	  offset.getMagnitude()
+	  offset.length() * Math.sqrt(3),
+	  offset.length()
 	)
 	let head = new Vector2(
 	  (origin.x % headIntervals.x) - headIntervals.x,
@@ -2747,7 +2747,7 @@
 	}
       }
       
-      const setRectangularOffset = (xOffset=wState[RECTANGULAR_OFFSET].getMagnitude() / Math.sqrt(2), yOffset) => {
+      const setRectangularOffset = (xOffset=wState[RECTANGULAR_OFFSET].length() / Math.sqrt(2), yOffset) => {
 	setWhiteboardState(
 	  RECTANGULAR_OFFSET,
 	  new Vector2(xOffset, yOffset || xOffset)
@@ -2761,7 +2761,7 @@
 	let {
 	  horizontalCells=null,
 	  verticalCells=null,
-	  scale=wState[RECTANGULAR_OFFSET].getMagnitude() / ansiALetterSize.getMagnitude(),
+	  scale=wState[RECTANGULAR_OFFSET].length() / ansiALetterSize.length(),
 	  landscape=false
 	} = options
 	const width = landscape ? ansiALetterSize.y : ansiALetterSize.x
@@ -2781,7 +2781,7 @@
 	magnitude=wState[HEX_MAGNITUDE]
       ) => {
 	if (typeof angle === 'object') {
-	  magnitude = angle.getMagnitude()
+	  magnitude = angle.length()
 	  angle = angle.getAngle()
 	}
 	setWhiteboardState(HEX_ANGLE, absoluteModulus(angle, Math.PI))
@@ -3091,7 +3091,7 @@
       }
 
       const constrainArc = (a, b, c) => {
-	const scale = a.getMagnitude(b)/a.getMagnitude(c)
+	const scale = a.length(b)/a.length(c)
 	return new Vector2(
 	  (c.x - a.x) * scale + a.x,
  	  (c.y - a.y) * scale + a.y
