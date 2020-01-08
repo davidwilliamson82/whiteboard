@@ -813,9 +813,8 @@
       const READING = 'READING'
       const PROBLEM_STATE = 'PROBLEM_STATE'
       const PROBLEM_LIMITS = 'PROBLEM_LIMITS'
-      const IS_ADDING = 'IS_ADDING'
-      const SUM = 'SUM'
-      const DIFFERENCE = 'DIFFERENCE'
+      const ANSWER = 'ANSWER'
+      const OPERAND = 'OPERAND'
       const DICTIONARY_WORD = 'DICTIONARY_WORD'
 
       const dom = {}
@@ -1750,9 +1749,8 @@
       defaultState[MARKS_HISTORY_LENGTH] = 50
       defaultState[PROBLEM_STATE] = new Vector2(-1, 1)
       defaultState[PROBLEM_LIMITS] = [0, 10, 5]
-      defaultState[SUM] = defaultState[PROBLEM_LIMITS][1]
-      defaultState[DIFFERENCE] = Math.floor(defaultState[SUM] / 2)
-      defaultState[IS_ADDING] = true
+      defaultState[ANSWER] = defaultState[PROBLEM_LIMITS][1]
+      defaultState[OPERAND] = Math.floor(defaultState[ANSWER] / 2)
       defaultState[DICTIONARY_WORD] = 'apple'
 
       const updateMarksHistory = (dataURL=dom[MARKS].toDataURL('image/png')) => {
@@ -2958,23 +2956,49 @@
 	}
 	switch (wState[PROBLEM_STATE].x) {
 	case 1:
-	  
+	  const negativeMagnitude = limit < 0 ? Math.abs(limit) : 0
+	  const range = Math.abs(limit) + negativeMagnitude + 1
+	  wState[PRINT_HEAD_LOCATION].set(120 - range * 2, wState[SCREEN_SIZE].y - 120)
+	  drawLine(
+	    GRID,
+	    wState[PRINT_HEAD_LOCATION],
+	    new Vector2(wState[SCREEN_SIZE].x - 120 + range * 2, wState[SCREEN_SIZE].y - 120),
+	    wState[BRUSHES][10].color,
+	    3
+	  )
+	  const interval = (wState[SCREEN_SIZE].x - 240 + range * 4) / (Math.abs(limit) + negativeMagnitude)
+	  let label = 0 - negativeMagnitude
+	  const labelSize = 10 + 360 / range
+	  while (label <= Math.abs(limit)) {
+	    drawLine(
+	      GRID,
+	      wState[PRINT_HEAD_LOCATION].add(new Vector2(0, -6)),
+	      wState[PRINT_HEAD_LOCATION].add(new Vector2(0, 6)),
+	      wState[BRUSHES][10].color,
+	      3 
+	    )
+	    drawText(
+	      GRID,
+	      label.toString(),
+	      wState[PRINT_HEAD_LOCATION].add(new Vector2(label.toString().length * labelSize * -0.31, labelSize + 8)),
+	      wState[BRUSHES][10].color,
+	      labelSize
+	    )
+	    wState[PRINT_HEAD_LOCATION].x += interval
+	    label += 1
+	  }
+	    
 	  if (!preserveProblem) {
-	    wState[SUM] = Math.floor(Math.random() * (limit - 2)) + 2
-	    wState[DIFFERENCE] = Math.round(Math.random() * wState[SUM])
-	    wState[IS_ADDING] = Boolean(Math.round(Math.random()))
+	    wState[ANSWER] = Math.floor(Math.random() * range) - negativeMagnitude
+	    wState[OPERAND] = Math.floor(Math.random() * range) - negativeMagnitude
 	  }
 	  const figures = [
-	    (wState[SUM] - wState[DIFFERENCE]).toString(),
-	    wState[DIFFERENCE].toString(),
-	    wState[SUM].toString()
+	    (wState[OPERAND]),
+	    (wState[ANSWER] - wState[OPERAND]),
+	    (wState[ANSWER])
 	  ]
-	  if (wState[IS_ADDING]) {
-	    figures.splice(1, 0, '+')
-	  } else {
-	    figures.reverse()
-	    figures.splice(1, 0, '-')
-	  }
+	  figures.splice(1, 0, figures[1] >= 0 ? '+' : '-')
+	  figures[2] = Math.abs(figures[2])
 	  figures.splice(3, 0, '=')
 	  let figureX = 100
 	  figures.slice(
@@ -2982,10 +3006,10 @@
 	    [4, 5][wState[PROBLEM_STATE].y]
 	  ).forEach((figure, i) => {
 	    numeralSize = 60 + 60 / limit.toString().length
-	    figureX += numeralSize * 0.62 * (i > 0 ? figures[i - 1].length : 0) + numeralSize * 3 / 24
+	    figureX += numeralSize * 0.62 * (i > 0 ? figures[i - 1].toString().length : 0) + numeralSize * 3 / 24
 	    drawText(
 	      GRID,
-	      figure,
+	      figure.toString(),
 	      new Vector2(figureX, 200),
 	      wState[BRUSHES][[1, 2, 2, 10, 10][i]].color,
 	      numeralSize
