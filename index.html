@@ -345,7 +345,7 @@
 	  if (!v) {
 	    v = new Vector2(0, 0)
 	  }
-	  return Math.sqrt((this.x - v.x) ** 2 + (this.y - v.y) ** 2)
+	  return Math.hypot(this.x - v.x, this.y - v.y)
 	}
 	
 	getTangent (v) {
