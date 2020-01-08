@@ -711,6 +711,51 @@
 	}
       }
 
+      const copy = (layer, area, cut) => {
+	clipboard = layers[layer].getImageData(
+	  area.x,
+	  area.y,
+	  area.width,
+	  area.height
+	)
+	if (cut) {
+	  layers[layer].clearRect(
+	    area.x, 
+	    area.y,
+	    area.width,
+	    area.height
+	  )
+	  updateMarksHistory()
+	}
+      }
+
+      const paste = (layer, content, location) => {
+	const originalMarks = layers[layer].getImageData(
+	  location.x, 
+	  location.y, 
+	  content.width, 
+	  content.height
+	)
+	let newImageData = []
+	for (let i = 0; i < content.data.length; i += 4) {
+	  let rOld = originalMarks.data[i]
+	  let rNew = content.data[i]
+	  let gOld = originalMarks.data[i + 1]
+	  let gNew = content.data[i + 1]
+	  let bOld = originalMarks.data[i + 2]
+	  let bNew = content.data[i + 2]
+	  let aOld = originalMarks.data[i + 3]
+	  let aNew = content.data[i + 3]
+	  newImageData.push(Math.min(255, rNew * (aNew / 255) + rOld * (aOld / 255) * (1 - (aNew / 255))))
+	  newImageData.push(Math.min(255, gNew * (aNew / 255) + gOld * (aOld / 255) * (1 - (aNew / 255))))
+	  newImageData.push(Math.min(255, bNew * (aNew / 255) + bOld * (aOld / 255) * (1 - (aNew / 255))))
+	  newImageData.push(Math.min(255, aOld + aNew))
+	}
+	const newContent = new ImageData(Uint8ClampedArray.from(newImageData), content.width, content.height)
+	layers[layer].putImageData(newContent, location.x, location.y)
+	updateMarksHistory()
+      }
+
       const logMarksData = () => {
 	const names = []
 	for (let name in wState[SAVED_MARKS_DATA]) {
@@ -2939,11 +2984,9 @@
       const doExampleProblem = (
 	problemState=wState[PROBLEM_STATE],
 	limit=wState[PROBLEM_LIMITS][wState[PROBLEM_STATE].x],
-	preserveProblem=true,
-	preservePhase=true
+	preserveProblem=false,
+	preservePhase=false
       ) => {
-	wState[PROBLEM_LIMITS][wState[PROBLEM_STATE].x] = limit
-	setWhiteboardState(PROBLEM_LIMITS, wState[PROBLEM_LIMITS])
 	if (!preservePhase) {
 	  wState[PROBLEM_STATE].y = (wState[PROBLEM_STATE].y + 1) % 2
 	}
@@ -2954,19 +2997,23 @@
 	  wState[PROBLEM_STATE].set(problemState, 0)
 	  setGrid()
 	}
+	wState[PROBLEM_LIMITS][wState[PROBLEM_STATE].x] = limit
+	setWhiteboardState(PROBLEM_LIMITS, wState[PROBLEM_LIMITS])
 	switch (wState[PROBLEM_STATE].x) {
 	case 1:
 	  const negativeMagnitude = limit < 0 ? Math.abs(limit) : 0
 	  const range = Math.abs(limit) + negativeMagnitude + 1
-	  wState[PRINT_HEAD_LOCATION].set(120 - range * 2, wState[SCREEN_SIZE].y - 120)
+	  const interval = (wState[SCREEN_SIZE].x - 160) / (Math.abs(limit) + negativeMagnitude)
+	  const coefficient = getGridCoefficient(interval, 5)
+	  wState[PRINT_HEAD_LOCATION].set(80, wState[SCREEN_SIZE].y - 120)
 	  drawLine(
 	    GRID,
 	    wState[PRINT_HEAD_LOCATION],
-	    new Vector2(wState[SCREEN_SIZE].x - 120 + range * 2, wState[SCREEN_SIZE].y - 120),
+	    new Vector2(wState[SCREEN_SIZE].x - 80, wState[SCREEN_SIZE].y - 120),
 	    wState[BRUSHES][10].color,
 	    3
 	  )
-	  const interval = (wState[SCREEN_SIZE].x - 240 + range * 4) / (Math.abs(limit) + negativeMagnitude)
+	  
 	  let label = 0 - negativeMagnitude
 	  const labelSize = 10 + 360 / range
 	  while (label <= Math.abs(limit)) {
@@ -2984,8 +3031,8 @@
 	      wState[BRUSHES][10].color,
 	      labelSize
 	    )
-	    wState[PRINT_HEAD_LOCATION].x += interval
-	    label += 1
+	    wState[PRINT_HEAD_LOCATION].x += interval * coefficient
+	    label += coefficient
 	  }
 	    
 	  if (!preserveProblem) {
@@ -3612,61 +3659,21 @@
 	case 'X':
 	  if (!isTyping && controlIsDown) {
 	    clearLayer(TOOLS)
-	    clipboard = layers[MARKS].getImageData(
-	      selectBox.x, 
-	      selectBox.y,
-	      selectBox.width,
-	      selectBox.height
-	    )
-	    layers[MARKS].clearRect(
-	      selectBox.x, 
-	      selectBox.y,
-	      selectBox.width,
-	      selectBox.height
-	    )
-	    updateMarksHistory()
+	    copy(MARKS, selectBox, true)
 	  }
 	  break
 	case 'c':
 	case 'C':
 	  if (!isTyping && controlIsDown) {
 	    clearLayer(TOOLS)
-	    clipboard = layers[MARKS].getImageData(
-	      selectBox.x,
-	      selectBox.y,
-	      selectBox.width,
-	      selectBox.height
-	    )
+	    copy(MARKS, selectBox, false)
 	  }
 	  break
 	case 'v':
 	case 'V':
 	  if (!isTyping) { 
 	    if (controlIsDown) {
-	      const originalMarks = layers[MARKS].getImageData(
-		currentMouseLocation.x, 
-		currentMouseLocation.y, 
-		clipboard.width, 
-		clipboard.height
-	      )
-	      let newImageData = []
-	      for (let i = 0; i < clipboard.data.length; i += 4) {
-		let rOld = originalMarks.data[i]
-		let rNew = clipboard.data[i]
-		let gOld = originalMarks.data[i + 1]
-		let gNew = clipboard.data[i + 1]
-		let bOld = originalMarks.data[i + 2]
-		let bNew = clipboard.data[i + 2]
-		let aOld = originalMarks.data[i + 3]
-		let aNew = clipboard.data[i + 3]
-		newImageData.push(Math.min(255, rNew * (aNew / 255) + rOld * (aOld / 255) * (1 - (aNew / 255))))
-		newImageData.push(Math.min(255, gNew * (aNew / 255) + gOld * (aOld / 255) * (1 - (aNew / 255))))
-		newImageData.push(Math.min(255, bNew * (aNew / 255) + bOld * (aOld / 255) * (1 - (aNew / 255))))
-		newImageData.push(Math.min(255, aOld + aNew))
-	      }
-	      const newClipboard = new ImageData(Uint8ClampedArray.from(newImageData), clipboard.width, clipboard.height)
-	      layers[MARKS].putImageData(newClipboard, currentMouseLocation.x, currentMouseLocation.y)
-	      updateMarksHistory()
+	      paste(MARKS, clipboard, currentMouseLocation)
 	    } else {
 	      wState[TOOL] = lastTool
 	    }
@@ -3695,6 +3702,7 @@
       let isDrawingRectangle = false
       let isDrawingLine = false
       let isTyping = false
+      let isHexaflexagon = false
       let constraint = NONE
       let storedFunctions = []
       let previousVanishingPoint = globalOrigin.copy()
