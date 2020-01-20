@@ -23,6 +23,13 @@
        display: none;
      }
 
+     button {
+       padding: 0.5rem;
+       text-align: center;
+       color: #ffffff;
+       background: #333333;
+     }
+
      .time {
        display: none;
        justify-content: space-around;
@@ -44,6 +51,17 @@
      #HOURS p {
        margin: 0;
      }
+
+     #CONTROLS {
+       display: none;
+     }
+
+     @media (max-width: 992px) {
+       #CONTROLS {
+	 display: block;
+       }
+     }
+
     </style> 
   </head>
   <body style="margin: 0; cursor: crosshair; position: absolute;">
@@ -58,6 +76,13 @@
     </div>
     <canvas id="PALETTE" style="position: fixed; left: 0px; top: 0px; z-index: 8;"></canvas>
     <div id="SENSOR" style="position: absolute; left: 0px; top: 0px; z-index: 9;"></div>
+    <div id="CONTROLS" style="position: absolute; left: 0px; top: 0px; z-index: 10;">
+      <button class="tool-button" id="PAINT_BRUSH">Paintbrush</button>
+      <button class="tool-button" id="RECTANGLE">Rectangle</button>
+      <button class="tool-button" id="ELLIPSE">Ellipse</button>
+      <button class="tool-button" id="LINE">Line</button>
+      <button class="tool-button" id="TEXT">Text</button>
+    </div>
     <audio id='AUDIO'></audio>
     <script>
       // CLASSES
@@ -323,7 +348,7 @@
 	}
 	
 	getClockTime () {
-	  return ((this.getAngle(getCenter()) + (Math.PI / 2)) * 30 / Math.PI) % 60
+	  return ((this.getAngle(wState[SCREEN_CENTER]) + (Math.PI / 2)) * 30 / Math.PI) % 60
 	}
 
 	copy () {
@@ -483,8 +508,20 @@
       }
 
       const getCollection = (size, query) => {
-	const collection = query ? query.collection : unsplashCollections[Math.floor((Math.random() * unsplashCollections.length))]
-	return `https://source.unsplash.com/collection/${collection}/${size.x}x${size.y}`
+	if (navigator.onLine) {
+	  const collection = query ? query.collection : unsplashCollections[Math.floor((Math.random() * unsplashCollections.length))]
+	  return `https://source.unsplash.com/collection/${collection}/${size.x}x${size.y}`
+	} else {
+	  return wState[DEFAULT_WALLPAPER]
+	}
+      }
+
+      const getPixelColors = (imageData) => {
+	const pixelColors = []
+	for (let i = 0; i < imageData.length; i += 4) {
+	  pixelColors.push(new Color(`rgba(${data[i]}, ${data[i + 1]}, ${data[i + 2]}, ${data[i + 3] / 255})`))
+	}
+	return pixelColors
       }
 
       const setWhiteboardState = (key, value) => { 
@@ -627,7 +664,13 @@
 	   canvas[layer].width = wState[SCREEN_SIZE].x = obj.naturalWidth * scale
 	   canvas[layer].height = wState[SCREEN_SIZE].y = obj.naturalHeight * scale
 	   } */
-	  context.drawImage(obj, 0, 0, wState[BOARD_SIZE].x, wState[BOARD_SIZE].y)
+	// context.clearRect(0, 0, wState[BOARD_SIZE].x, wState[BOARD_SIZE].y)
+	context.drawImage(obj, 0, 0, wState[BOARD_SIZE].x, wState[BOARD_SIZE].y)
+	if (firstLoad) {
+	  console.clear()
+	  console.log(`Wallpaper Image: ${wState[WALLPAPER_IMAGE]}`)
+	}
+	firstLoad = false
       }
 
       const setImage = (layer, src, style) => {
@@ -802,12 +845,15 @@
       const CLOCK_ANGLES = 'CLOCK_ANGLES'
       const MARKS = 'MARKS'
       const SENSOR = 'SENSOR'
+      const CONTROLS = 'CONTROLS'
       const AUDIO = 'AUDIO'
 
       const DOCUMENT_TITLE = 'DOCUMENT_TITLE' // String
       const SCREEN_SIZE = 'SCREEN_SIZE' // Vector2 *
+      const SCREEN_CENTER = 'SCREEN_CENTER' // Vector2 *
       const BOARD_SIZE = 'BOARD_SIZE' // Vector2 *
       const BOARD_SCALE = 'BOARD_SCALE' // Vector2 *
+      const DEFAULT_WALLPAPER = '' // String
       const WALLPAPER_IMAGE = 'WALLPAPER_IMAGE' // String, not stored
       const OVERLAY_COLOR = 'OVERLAY_COLOR' // Color *
       const GRID_TYPE = 'GRID_TYPE'
@@ -1016,11 +1062,11 @@
 	  
 	  const offset = {}
 	  if ((gridType.x === 3) && (gridType.y === 2)) {
-	    offset.angle = toolLocation.getAngle(getCenter())
+	    offset.angle = toolLocation.getAngle(wState[SCREEN_CENTER])
 	    offset.location = new Vector2({
-	      angle: toolLocation.getAngle(getCenter()),
-	      magnitude: mouseDown.length(getCenter())
-	    }).add(getCenter())
+	      angle: toolLocation.getAngle(wState[SCREEN_CENTER]),
+	      magnitude: mouseDown.length(wState[SCREEN_CENTER])
+	    }).add(wState[SCREEN_CENTER])
 	  } else {
 	    offset.angle = toolLocation.getAngle(mouseDown)
 	    offset.location = toolLocation
@@ -1044,23 +1090,30 @@
       tools[PAINT_BRUSH] = {
 	mouseDown: (toolLocation) => {},
 	mouseMove: (toolLocation) => {
-	  const offset = new Vector2(toolLocation.x, toolLocation.y)
-	  if (mouseIsDown && constraints[constraint](toolLocation)) {
+	  const head = wState[PRINT_HEAD_LOCATION]
+	  const tool = constraints[constraint](toolLocation)
+	  if (mouseIsDown && tool) {
 	    if (spaceIsDown) {
+	      const angle = tool.getAngle(wState[PRINT_HEAD_LOCATION]) + Math.PI / 2
+	      const offset = new Vector2({ 
+		angle: absoluteModulus(angle + Math.PI * 2, Math.PI * 2), 
+		magnitude: wState[ERASE_RADIUS]
+	      })
 	      layers[MARKS].save()
-	      layers[MARKS].moveTo(constraints[constraint](toolLocation).x, constraints[constraint](toolLocation).y)
-	      layers[MARKS].arc(constraints[constraint](toolLocation).x, constraints[constraint](toolLocation).y, wState[ERASE_RADIUS], 0, Math.PI*2, 2)
+	      layers[MARKS].beginPath()
+	      layers[MARKS].moveTo(head.x + offset.x, head.y + offset.y)
+	      layers[MARKS].arc(head.x, head.y, wState[ERASE_RADIUS], angle, angle + Math.PI, false)
+	      layers[MARKS].lineTo(tool.x - offset.x, tool.y - offset.y)
+	      layers[MARKS].arc(tool.x, tool.y, wState[ERASE_RADIUS], angle + Math.PI, angle, false)
+	      layers[MARKS].closePath()
 	      layers[MARKS].clip()
 	      clearLayer(MARKS)
 	      layers[MARKS].restore()
 	    } else {
 	      layers[MARKS].lineJoin = layers[MARKS].lineCap = 'round';
-	      layers[MARKS].beginPath();
-	      layers[MARKS].moveTo(wState[PRINT_HEAD_LOCATION].x, wState[PRINT_HEAD_LOCATION].y);
-	      layers[MARKS].lineTo(constraints[constraint](toolLocation).x, constraints[constraint](toolLocation).y)
-	      layers[MARKS].stroke();
+	      strokeLine(MARKS, wState[PRINT_HEAD_LOCATION], tool)
 	    }
-	    wState[PRINT_HEAD_LOCATION].set(constraints[constraint](toolLocation).x, constraints[constraint](toolLocation).y)
+	    wState[PRINT_HEAD_LOCATION].set(tool.x, tool.y)
 	  }
 	},
 	mouseUp: (toolLocation) => {
@@ -1295,7 +1348,7 @@
 	mouseMove: (toolLocation) => {
 	  clearLayer(TOOLS, true)
 	  if (wState[GRID_TYPE].x === 3 && wState[GRID_TYPE].y === 2) {
-	    const center = getCenter()
+	    const center = wState[SCREEN_CENTER]
 	    const radius = wState[MOUSE_DOWN_LOCATION].length(center)
 	    const end = constrainArc(center, wState[MOUSE_DOWN_LOCATION], toolLocation)
 	    const measurementElement = document.createElementNS(svgNameSpace, 'path')
@@ -1507,11 +1560,7 @@
 		angle: absoluteModulus(wState[HEX_ANGLE] + offset.hex.angle, Math.PI)
 	      }
 	    })
-	    drawCircle(
-	      wState[VANISHING_POINT], 
-	      5, 
-	      wState[GRID_COLOR]
-	    )
+	    drawVanishingPoint()
 	  }
 	},
 	mouseUp: (toolLocation) => {
@@ -1789,6 +1838,7 @@
       defaultState[MOUSE_UP_LOCATION] = globalOrigin.copy()
       defaultState[PRINT_HEAD_LOCATION] = globalOrigin.copy()
       defaultState[MEASUREMENT] = globalOrigin.copy()
+      defaultState[DEFAULT_WALLPAPER] = 'default-wallpaper.png'
       defaultState[MARKS_DATA] = 'untitled'
       defaultState[SAVED_MARKS_DATA] = {}
       defaultState[MARKS_HISTORY_LENGTH] = 50
@@ -1809,6 +1859,14 @@
       }
       
       // Prepare Objects for Grid
+
+      const strokeLine = (layer, fv, tv) => {
+	  layers[layer].beginPath()
+	  layers[layer].moveTo(fv.x, fv.y)
+	  layers[layer].lineTo(tv.x, tv.y)
+	  layers[layer].stroke()
+      }
+      
       const drawLine = function(layer, fv, tv, color, width) {
 	if (layers[layer].nodeName === 'svg') {
 	  const line = document.createElementNS(svgNameSpace, 'line')
@@ -1825,10 +1883,7 @@
 	  }
 	  layers[layer].strokeStyle = color.getRgba()
 	  layers[layer].lineWidth = width
-	  layers[layer].beginPath()
-	  layers[layer].moveTo(fv.x, fv.y)
-	  layers[layer].lineTo(tv.x, tv.y)
-	  layers[layer].stroke()
+	  strokeLine(layer, fv, tv)
 	  layers[layer].strokeStyle = wState[BRUSHES][wState[BRUSH]].color.getRgba()
 	  layers[layer].lineWidth = wState[BRUSHES][wState[BRUSH]].width
 	}
@@ -1905,7 +1960,7 @@
 
       // draw cursor for typing
       const drawTextCursor = () => {
-	if (isTyping) {
+	if (wState[TOOL] === TEXT) {
 	  clearLayer(TOOLS)
 	  const rectangle = document.createElementNS(svgNameSpace, 'rect')
 	  rectangle.setAttribute('id', 'rectangle')
@@ -2604,13 +2659,8 @@
 	setInterval(() => {
 	  if (wState[GRID_TYPE].x === 3 && wState[GRID_TYPE].y === 2) {
 	    clearLayer(GRID)
-	    drawCircle(
-	      wState[VANISHING_POINT], 
-	      5, 
-	      wState[GRID_COLOR]
-	    )
-
-	    const center = getCenter()
+	    drawVanishingPoint()
+	    const center = wState[SCREEN_CENTER]
 	    let headAngle = Math.PI * 81/ 480
 	    while (headAngle < Math.PI * 2) {
 	      const path = document.createElementNS(svgNameSpace, 'path')
@@ -2651,8 +2701,6 @@
 	      2
 	    )
 	  }
-
-
 	}, 1000);
       }
     
@@ -2694,8 +2742,18 @@
 	setWhiteboardState(BRUSHES, wState[BRUSHES])
       }
 
+      const drawVanishingPoint = () => {
+	if (vanishingPointVisible || ((wState[GRID_TYPE].x > 0) && (wState[GRID_TYPE].x < 3))) {
+	  drawCircle(
+	    wState[VANISHING_POINT], 
+	    5, 
+	    wState[GRID_COLOR]
+	  )
+	}
+      }
+
       const getGridCoefficient = (pixels, factor=3) => Math.pow(10, 1 - Math.floor(Math.log10(pixels / factor)))
-      
+
       const drawGrid = (type, offset) => {
 	doExampleProblem(wState[PROBLEM_STATE], wState[PROBLEM_LIMITS][wState[PROBLEM_STATE].x], true, true)
 	if (type.x === 0) {
@@ -2751,7 +2809,7 @@
 
       const setGrid = (type=wState[GRID_TYPE]) => {
 	clearLayer(GRID)
-	if (isTyping) {
+	if (wState[TOOL] === TEXT) {
 	  drawTextCursor()
 	}
 	if (type.x === 0) {
@@ -2785,12 +2843,8 @@
 	  })
 	  wState[GRID_TYPE].set(type)
 	  setWhiteboardState(GRID_TYPE)
-	  drawCircle(
-	    wState[VANISHING_POINT], 
-	    5, 
-	    wState[GRID_COLOR]
-	  )
 	}
+	drawVanishingPoint()
       }
       
       const setRectangularOffset = (xOffset=wState[RECTANGULAR_OFFSET].length() / Math.sqrt(2), yOffset) => {
@@ -2844,14 +2898,34 @@
 	setGrid()
       }
 
-      const getCenter = (size='SCREEN') => {
-	return new Vector2(wState[`${size}_SIZE`].scale(1 / 2))
+      const divideCircle = (magnitude, intervals=12, startAngle=0, center=wState[SCREEN_CENTER]) => {
+	let angle = startAngle
+	const points = []
+	while ((angle - startAngle) < (Math.PI * 2)) {
+	  points.push(new Vector2({ magnitude, angle }).add(center))
+	  angle += Math.PI * 2 / intervals
+	}
+	return points
+      }
+
+      const drawPhonemes = (initialHue=(45 / 2), divisions=11) => {
+	let hue = initialHue
+	const phonemeLocations = divideCircle(250, divisions, Math.PI / 2)
+	for (let location of phonemeLocations) {
+	  drawCircle(
+	    location,
+	    40,
+	    new Color(`hsla(${hue}, 100%, 50%, 1)`),
+	    true
+	  )
+	  hue = (hue + 360 / divisions) % 360
+	}
       }
 
       const straightenGrids = () => {
 	setRectangularOffset()
 	setHexagonalOffset()
-	setVanishingPoint(getCenter())
+	setVanishingPoint(wState[SCREEN_CENTER])
       }
 
       const addAngle = (degrees) => {
@@ -3266,20 +3340,20 @@
       })
 
       document.addEventListener('keydown', (event) => {
-	if (isTyping) {
+	if (wState[TOOL] === TEXT) {
 	  typingFunction(event)
 	}
 	if (!keyIsDown) {
 	  switch (event.key) {
 	    case 'h':
-	       if (!isTyping) {
+	       if (wState[TOOL] !== TEXT) {
 		 alert('TOOLS:\n  P - paintbrush\n  R - rectangle\n  E - ellipse\n  L - line\n  T - text\n  M - measure\n  Z - zoom\n  S - select\n\nOTHER CONTROLS:\n  Backtick, 0 - 9: choose brush, hold to set color\n    the color palettes are arranged as follows:\n      Left - paintbrush color\n      Center - overlay color\n      Right - grid color\n  "-", "=" - adjust brush width\n  "[", "]" - adjust font size\n  F - toggle fill for shapes and arrows\n  V - place vanishing point, hold to scale grid units\n  G - choose grid type\n  J - choose grid cell type\n  I - reset Unsplash image\n  Right-Click - save marks-data')
 		 alert('Ctrl:\n  constrains paintbrush to grid axes\n  constrains shapes to 1x1 aspect ratio\n  constrains line to 15 degree increments\n  Ctrl+Z - undo\n  Ctrl+Y - redo\n  Ctrl+C - copy selection\n  Ctrl+X - cut selection\n  Ctrl+V - paste selection\n\nArrow Keys:\n  Up - constrains paintbrush to vertical\n  Left - constrains paintbrush to horizontal\n  Down - constrains paintbrush to lines intersecting vanishing point\n  Right - constrains paintbrush to arcs about vanishing point\n  Forward Slash - constrains brush to parallel\n  Apostrophe - constrainst brush to perpendicular\n\nQUERY PARAMETERS:\n  document-title\n  screen-size, board-size\n  problem-image, wallpaper-image\n  marks-data')
 	       }
 	       break
 	  case 't':
 	  case 'T':
-	    if (!isTyping) {
+	    if (wState[TOOL] !== TEXT) {
 	      lastTool = wState[TOOL]
 	      setWhiteboardState(TOOL, TEXT)
 	      isTyping = true
@@ -3288,35 +3362,36 @@
 	    break
 	  case 'g':
 	  case 'G':
-	    if (!isTyping) {
+	    if (wState[TOOL] !== TEXT) {
 	      wState[GRID_TYPE].set((wState[GRID_TYPE].x + 1) % 4, wState[GRID_TYPE].y)
 	      setGrid()
 	    }
 	    break
 	  case 'j':
 	  case 'J':
-	    if (!isTyping) {
+	    if (wState[TOOL] !== TEXT) {
 	      wState[GRID_TYPE].set(wState[GRID_TYPE].x, (wState[GRID_TYPE].y + 1) % 3)
 	      setGrid()
 	    }
 	    break
 	  case 'i':
 	  case 'I':
-	    if (!isTyping) {
+	    if (wState[TOOL] !== TEXT) {
 	      wState[WALLPAPER_IMAGE] = getCollection(wState[SCREEN_SIZE])
 	      setImage(WALLPAPER, wState[WALLPAPER_IMAGE])
+	      console.log(`Wallpaper Image: ${wState[WALLPAPER_IMAGE]}`)
 	    }
 	    break
 	  case 's':
 	  case 'S':
-	    if (!isTyping) {
+	    if (wState[TOOL] !== TEXT) {
 	      clearLayer(TOOLS)
 	      setWhiteboardState(TOOL, SELECT)
 	      lastTool = SELECT
 	    }
 	    break
 	  case '.':
-	    if (!isTyping) {
+	    if (wState[TOOL] !== TEXT) {
 	      slide++
 		clearLayer(WALLPAPER)
 	      setImage(WALLPAPER, slideshow[slide % slideshow.length])
@@ -3324,7 +3399,7 @@
 	    }
 	    break
 	  case ',':
-	    if (!isTyping) {
+	    if (wState[TOOL] !== TEXT) {
 	      slide--
 		clearLayer(WALLPAPER)
 	      setImage(WALLPAPER, slideshow[slide % slideshow.length])
@@ -3332,31 +3407,31 @@
 	    }
 	    break
 	  case '-':
-	    if (!isTyping && layers[MARKS].lineWidth > 1) {
+	    if (wState[TOOL] !== TEXT && layers[MARKS].lineWidth > 1) {
 	      setBrushWidth(parseInt(wState[BRUSHES][wState[BRUSH]].width) - 1)
 	      setWhiteboardState(BRUSHES, wState[BRUSHES])
 	      setWhiteboardState(ERASE_RADIUS, wState[ERASE_RADIUS])
 	    } 
 	    break
 	  case '=':
-	    if (!isTyping) {
+	    if (wState[TOOL] !== TEXT) {
 	      setBrushWidth(parseInt(wState[BRUSHES][wState[BRUSH]].width) + 1)
 	      setWhiteboardState(BRUSHES, wState[BRUSHES])
 	      setWhiteboardState(ERASE_RADIUS, wState[ERASE_RADIUS])
 	    }
 	    break
 	  case '[':
-	    if (!isTyping && wState[FONT_HEIGHT] > 0) {
+	    if (wState[TOOL] !== TEXT && wState[FONT_HEIGHT] > 0) {
 	      setFontHeight(wState[FONT_HEIGHT] - 1)
 	    }
 	    break
 	  case ']':
-	    if (!isTyping && wState[FONT_HEIGHT] < 13) {
+	    if (wState[TOOL] !== TEXT && wState[FONT_HEIGHT] < 13) {
 	      setFontHeight(wState[FONT_HEIGHT] + 1)
 	    }
 	    break
 	  case '`':
-	    if (!isTyping) {
+	    if (wState[TOOL] !== TEXT) {
 	      lastTool = wState[TOOL]
 	      wState[TOOL] = PALETTE
 	      if (wState[BRUSH] !== 10) {
@@ -3377,7 +3452,7 @@
 	  case '7':
 	  case '8':
 	  case '9':
-	    if (!isTyping) {
+	    if (wState[TOOL] !== TEXT) {
 	      lastTool = wState[TOOL]
 	      wState[TOOL] = PALETTE
 	      if (parseInt(event.key) !== wState[BRUSH]) {
@@ -3390,13 +3465,15 @@
 	    break
 	  case 'v':
 	  case 'V':
-	    if (!isTyping) {
+	    if (wState[TOOL] !== TEXT && !controlIsDown) {
 	      setVanishingPoint(wState[MOUSE_MOVE_LOCATION].x, wState[MOUSE_MOVE_LOCATION].y)
-	      wState[TOOL] = GRID
+	      wState[TOOL] = GRID	      
+	      vanishingPointVisible = true
+	      drawVanishingPoint()
 	    }
 	    break
 	  case 'Enter':
-	    if (!isTyping) {
+	    if (wState[TOOL] !== TEXT) {
 	      doExampleProblem(
 		wState[PROBLEM_STATE],
 		wState[PROBLEM_LIMITS][wState[PROBLEM_STATE].x],
@@ -3407,7 +3484,7 @@
 	    break
 	  case 'Tab':
 	    event.preventDefault()
-	    if (isTyping) { 
+	    if (wState[TOOL] === TEXT) { 
 	      wState[PRINT_HEAD_LOCATION].x += wState[FONT_WIDTH] * wState[TAB_WIDTH]
 	      drawTextCursor()
 	    }
@@ -3424,7 +3501,7 @@
 	switch (event.key) {
 	case 'ArrowRight':
 	  event.preventDefault()
-	  if (!isTyping) {
+	  if (wState[TOOL] !== TEXT) {
 	    constraint = ARC
 	  }else { 
 	    wState[PRINT_HEAD_LOCATION].x += wState[FONT_WIDTH]
@@ -3433,7 +3510,7 @@
 	  break
 	case 'ArrowUp':
 	  event.preventDefault()
-	  if (!isTyping) {
+	  if (wState[TOOL] !== TEXT) {
 	    constraint = VERTICAL
 	  } else { 
 	   wState[PRINT_HEAD_LOCATION].y -= wState[LINE_SPACING]
@@ -3442,7 +3519,7 @@
 	  break
 	case 'ArrowLeft':
 	  event.preventDefault()
-	  if (!isTyping) {
+	  if (wState[TOOL] !== TEXT) {
 	    constraint = HORIZONTAL
 	  } else { 
 	   wState[PRINT_HEAD_LOCATION].x -= wState[FONT_WIDTH]
@@ -3451,7 +3528,7 @@
 	  break
 	case 'ArrowDown':
 	  event.preventDefault()
-	  if (!isTyping) {
+	  if (wState[TOOL] !== TEXT) {
 	    constraint = VANISHING
 	  } else { 
 	   wState[PRINT_HEAD_LOCATION].y += wState[LINE_SPACING]
@@ -3459,7 +3536,7 @@
 	  }
 	  break
 	case 'Control':
-	  if (!isTyping) {
+	  if (wState[TOOL] !== TEXT) {
 	    constraint = [
 	      COMMITTED, 
 	      VERTICAL_HORIZONTAL,
@@ -3481,25 +3558,25 @@
 	  }
 	  break
 	case 'Shift':
-	  if (!isTyping) {
+	  if (wState[TOOL] !== TEXT) {
 	    shiftIsDown = true
 	  }
 	  break
 	case '/':
 	  event.preventDefault()
-	  if (!isTyping) {
+	  if (wState[TOOL] !== TEXT) {
 	    constraint = PARALLEL
 	  } 
 	  break
 	case "'":
 	  event.preventDefault()
-	  if (!isTyping) {
+	  if (wState[TOOL] !== TEXT) {
 	    constraint = PERPENDICULAR
 	  } 
 	  break
 	case 'p':
 	case 'P':
-	  if (!isTyping) {
+	  if (wState[TOOL] !== TEXT) {
 	    clearLayer(TOOLS)
 	    setWhiteboardState(TOOL, PAINT_BRUSH)
 	    lastTool = PAINT_BRUSH
@@ -3507,7 +3584,7 @@
 	  break
 	case 'r':
 	case 'R':
-	  if (!isTyping && !controlIsDown) {
+	  if (wState[TOOL] !== TEXT && !controlIsDown) {
 	    clearLayer(TOOLS)
 	    setWhiteboardState(TOOL, RECTANGLE)
 	    lastTool = RECTANGLE
@@ -3515,7 +3592,7 @@
 	  break
 	case 'e':
 	case 'E':
-	  if (!isTyping) {
+	  if (wState[TOOL] !== TEXT) {
 	    clearLayer(TOOLS)
 	    setWhiteboardState(TOOL, ELLIPSE)
 	    lastTool = ELLIPSE
@@ -3523,7 +3600,7 @@
 	  break
 	case 'l':
 	case 'L':
-	  if (!isTyping) {
+	  if (wState[TOOL] !== TEXT) {
 	    clearLayer(TOOLS)
 	    setWhiteboardState(TOOL, LINE)
 	    lastTool = LINE
@@ -3531,7 +3608,7 @@
 	  break
 	case 'm':
 	case 'M':
-	  if (!isTyping) {
+	  if (wState[TOOL] !== TEXT) {
 	    clearLayer(TOOLS)
 	    setWhiteboardState(TOOL, MEASURE)
 	    lastTool = MEASURE
@@ -3539,7 +3616,7 @@
 	  break
 	case 'z':
 	case 'Z':
-	  if (!isTyping && !controlIsDown) {
+	  if (wState[TOOL] !== TEXT && !controlIsDown) {
 	    clearLayer(TOOLS)
 	    setWhiteboardState(TOOL, ZOOM)
 	    lastTool = ZOOM
@@ -3557,7 +3634,7 @@
 	  break
 	case ' ':
 	  event.preventDefault()
-	  if (!isTyping) {
+	  if (wState[TOOL] !== TEXT) {
 	    spaceIsDown = true
 	  }
 	  break
@@ -3568,7 +3645,6 @@
 	  isDrawingEllipse = false
 	  isDrawingLine = false
 	  isErasing = false
-	  isTyping = false
 	  if (lastTool !== undefined && lastTool !== TEXT) {
 	    wState[TOOL] = lastTool
 	  } else {
@@ -3577,7 +3653,7 @@
 	  clearLayer(TOOLS, true)
 	  break
 	case 'Backspace':
-	  if (!isTyping) {
+	  if (wState[TOOL] !== TEXT) {
 	    clearLayer(MARKS)
 	  } else {
 	   wState[PRINT_HEAD_LOCATION].x -= wState[FONT_WIDTH]
@@ -3587,12 +3663,13 @@
 	      wState[FONT_WIDTH], 
 	      fontSizes[wState[FONT_HEIGHT]] * 1.21
 	    )
+	    updateMarksHistory()
 	    drawTextCursor()
 	  }
 	  break
 	case 'Enter':
 	  // is point above line?
-	  if (isTyping) {
+	  if (wState[TOOL] === TEXT) {
 	   wState[PRINT_HEAD_LOCATION].x = wState[MOUSE_DOWN_LOCATION].x
 	   wState[PRINT_HEAD_LOCATION].y += wState[LINE_SPACING]
 	    drawTextCursor()
@@ -3607,7 +3684,7 @@
 
 	switch (event.key) {
 	case ' ':
-	  if (!isTyping) {
+	  if (wState[TOOL] !== TEXT) {
 	    spaceIsDown = false
 	    break
 	  }
@@ -3618,7 +3695,7 @@
 	case '/':
 	case "'":
 	case 'Control':
-	  if (!isTyping) {
+	  if (wState[TOOL] !== TEXT) {
 	    if (constraint === COMMITTED) {
 	      wState[TOOL] = lastTool
 	    }
@@ -3637,41 +3714,34 @@
 	case '7':
 	case '8':
 	case '9':
-	  if (!isTyping) {
+	  if (wState[TOOL] !== TEXT) {
 	    wState[TOOL] = lastTool
 	    isPickingColor = false
 	    dom[PALETTE].style.display = 'none'
 	    break
 	  }
 	case 'Shift':
-	  if (!isTyping) {
+	  if (wState[TOOL] !== TEXT) {
 	    shiftIsDown = false
-	  }
-	  break
-	case 'z':
-	case 'Z':
-	  if (!isTyping && controlIsDown && historyIndex > 0) {
-	    historyIndex -= 1
-	    setImage(MARKS, marksHistory[historyIndex])
 	  }
 	  break
 	case 'x':
 	case 'X':
-	  if (!isTyping && controlIsDown) {
+	  if (wState[TOOL] !== TEXT && controlIsDown) {
 	    clearLayer(TOOLS)
 	    copy(MARKS, selectBox, true)
 	  }
 	  break
 	case 'c':
 	case 'C':
-	  if (!isTyping && controlIsDown) {
+	  if (wState[TOOL] !== TEXT && controlIsDown) {
 	    clearLayer(TOOLS)
 	    copy(MARKS, selectBox, false)
 	  }
 	  break
 	case 'v':
 	case 'V':
-	  if (!isTyping) { 
+	  if (wState[TOOL] !== TEXT) { 
 	    if (controlIsDown) {
 	      paste(MARKS, clipboard, currentMouseLocation)
 	    } else {
@@ -3679,9 +3749,16 @@
 	    }
 	  } 
 	  break
+	case 'z':
+	case 'Z':
+	  if (wState[TOOL] !== TEXT && controlIsDown && historyIndex > 0) {
+	    historyIndex -= 1
+	    setImage(MARKS, marksHistory[historyIndex])
+	  }
+	  break
 	case 'y':
 	case 'Y':
-	  if (!isTyping && controlIsDown && historyIndex < marksHistory.length - 1) {
+	  if (wState[TOOL] !== TEXT && controlIsDown && historyIndex < marksHistory.length - 1) {
 	    historyIndex += 1
 	    setImage(MARKS, marksHistory[historyIndex])
 	  }
@@ -3701,7 +3778,6 @@
       let measurementElement
       let isDrawingRectangle = false
       let isDrawingLine = false
-      let isTyping = false
       let isHexaflexagon = false
       let constraint = NONE
       let storedFunctions = []
@@ -3710,6 +3786,8 @@
       let historyIndex = 0
       let currentMouseLocation = globalOrigin.copy()
       let marksHistory
+      let firstLoad = true
+      let vanishingPointVisible = false
 
       const query = parseQueryString(window.location.href)
       const wState = {}
@@ -3725,6 +3803,7 @@
       wState[SCREEN_SIZE] = query[SCREEN_SIZE] 
 	? new Vector2(query[SCREEN_SIZE]) 
 	: new Vector2(window.screen.width, window.screen.height)
+      wState[SCREEN_CENTER] = wState[SCREEN_SIZE].scale(1 / 2)
       wState[BOARD_SIZE] = query[BOARD_SIZE]
 	? new Vector2(query[BOARD_SIZE]) 
 	: new Vector2(
@@ -3774,7 +3853,6 @@
       }
       lastTool= wState[TOOL]
       if (wState[TOOL] === TEXT) {
-	isTyping = true
 	wState[PRINT_HEAD_LOCATION].set(wState[MOUSE_DOWN_LOCATION])
 	drawTextCursor()
       }
@@ -3800,6 +3878,8 @@
       } else {
 	marksHistory = [dom[MARKS].toDataURL('image/png')]
       }
+
+      document.querySelectorAll('.tool-button').forEach((button) => button.onclick = () => setWhiteboardState(TOOL, button.id))
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/110/three.min.js" integrity="sha256-gSh8eotzb/CVvCREGPUNgIWuDnTYnZvVOQnRrP1eDjI=" crossorigin="anonymous"></script>
     <script src="https://d3js.org/d3.v5.min.js"></script>
