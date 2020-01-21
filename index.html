@@ -667,7 +667,7 @@
 	// context.clearRect(0, 0, wState[BOARD_SIZE].x, wState[BOARD_SIZE].y)
 	context.drawImage(obj, 0, 0, wState[BOARD_SIZE].x, wState[BOARD_SIZE].y)
 	if (firstLoad) {
-	  console.clear()
+	  // console.clear()
 	  console.log(`Wallpaper Image: ${wState[WALLPAPER_IMAGE]}`)
 	}
 	firstLoad = false
@@ -1956,7 +1956,6 @@
 	layers[GRID].appendChild(circle)
 	return circle
       }
-      
 
       // draw cursor for typing
       const drawTextCursor = () => {
@@ -2500,6 +2499,29 @@
 	  )
 	  head.x += 1
 	}
+
+	const currentTime = new Date()
+	const halfHours = (currentTime.getDay() * 48 + currentTime.getHours() * 2 + Math.floor(currentTime.getMinutes() / 30) + 324) % 336
+	const pastColor = new Color(wState[GRID_COLOR]).modify({ alpha: 0.3 }).getRgba()
+	const daysGone = document.createElementNS(svgNameSpace, 'rect')
+	daysGone.setAttribute('id', 'daysGone')
+	daysGone.setAttribute('stroke', 'none')
+	daysGone.setAttribute('fill', pastColor)
+	daysGone.setAttribute('x', origin.x)
+	daysGone.setAttribute('y', origin.y)
+	daysGone.setAttribute('width', Math.floor(halfHours / 48) * offset.x)
+	daysGone.setAttribute('height', offset.y * 48)
+	layers[GRID].appendChild(daysGone)
+	const hoursGone = document.createElementNS(svgNameSpace, 'rect')
+	hoursGone.setAttribute('id', 'hoursGone')
+	hoursGone.setAttribute('stroke', 'none')
+	hoursGone.setAttribute('fill', pastColor)
+	hoursGone.setAttribute('x', Math.floor(halfHours / 48) * offset.x + origin.x)
+	hoursGone.setAttribute('y', origin.y)
+	hoursGone.setAttribute('width', offset.x)
+	hoursGone.setAttribute('height', (halfHours % 48) * offset.y)
+	layers[GRID].appendChild(hoursGone)
+
       }
 
       drawCalendar = () => {
@@ -2549,7 +2571,7 @@
 	  wState[TIME_PADDING].x,
 	  wState[TIME_PADDING].y * 3
 	)
-	
+ 
 	drawLine(
 	  GRID,
 	  new Vector2(
@@ -2630,6 +2652,27 @@
 	let halfSpace
 	while (thisDate <= theseDays) {
 	  halfSpace = thisDate < 10 ? 5.5 : 0
+	  if (thisDate === today.getDate()) {
+	    const pastColor = new Color(wState[GRID_COLOR]).modify({ alpha: 0.3 }).getRgba()
+	    const weeksGone = document.createElementNS(svgNameSpace, 'rect')
+	    weeksGone.setAttribute('id', 'weeksGone')
+	    weeksGone.setAttribute('stroke', 'none')
+	    weeksGone.setAttribute('fill', pastColor)
+	    weeksGone.setAttribute('x', wState[TIME_PADDING].x)
+	    weeksGone.setAttribute('y', wState[TIME_PADDING].y * 4)
+	    weeksGone.setAttribute('width', wState[BOARD_SIZE].x - wState[TIME_PADDING].x * 2)
+	    weeksGone.setAttribute('height', printHead.y - wState[TIME_PADDING].y * 4)
+	    layers[GRID].appendChild(weeksGone)
+	    const daysGone = document.createElementNS(svgNameSpace, 'rect')
+	    daysGone.setAttribute('id', 'daysGone')
+	    daysGone.setAttribute('stroke', 'none')
+	    daysGone.setAttribute('fill', pastColor)
+	    daysGone.setAttribute('x', wState[TIME_PADDING].x)
+	    daysGone.setAttribute('y', printHead.y)
+	    daysGone.setAttribute('width', today.getDay() * wState[CALENDAR_OFFSET].x)
+	    daysGone.setAttribute('height', wState[CALENDAR_OFFSET].y)
+	    layers[GRID].appendChild(daysGone)
+	  }
 	  drawText(
 	    GRID, 
 	    thisDate,
