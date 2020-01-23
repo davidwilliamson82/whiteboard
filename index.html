@@ -56,11 +56,11 @@
        display: none;
      }
 
-     @media (max-width: 992px) {
-       #CONTROLS {
-	 display: block;
-       }
-     }
+     /* @media (max-width: 992px) {
+	#CONTROLS {
+	display: block;
+	}
+	} */
 
     </style> 
   </head>
@@ -2697,19 +2697,21 @@
 
       drawClock = () => {
 	daysElement.style.display = hoursElement.style.display = 'none'
-	const clockCenter = wState[SCREEN_SIZE].scale(1 / 2)
-	const clockRadius = (wState[SCREEN_SIZE].y - wState[TIME_PADDING].y * 2) / 2
 	setInterval(() => {
 	  if (wState[GRID_TYPE].x === 3 && wState[GRID_TYPE].y === 2) {
+	    const clockCenter = new Vector2(
+	      window.innerWidth / 2,
+	      window.innerHeight / 2
+	    )
+	    const clockRadius = (Math.min(window.innerWidth, window.innerHeight) - wState[TIME_PADDING].y * 2) / 2
 	    clearLayer(GRID)
 	    drawVanishingPoint()
-	    const center = wState[SCREEN_CENTER]
 	    let headAngle = Math.PI * 81/ 480
 	    while (headAngle < Math.PI * 2) {
 	      const path = document.createElementNS(svgNameSpace, 'path')
-	      const headPixels = center.add(new Vector2({ magnitude: clockRadius, angle: headAngle }))
-	      const endPixels = center.add(new Vector2({ magnitude: clockRadius, angle: headAngle + Math.PI * 79 / 240 }))
-	      const bigArc = (endPixels.getAngle(center) - headPixels.getAngle(center) + (Math.PI * 2)) % (Math.PI * 2) > Math.PI ? 1 : 0
+	      const headPixels = clockCenter.add(new Vector2({ magnitude: clockRadius, angle: headAngle }))
+	      const endPixels = clockCenter.add(new Vector2({ magnitude: clockRadius, angle: headAngle + Math.PI * 79 / 240 }))
+	      const bigArc = (endPixels.getAngle(clockCenter) - headPixels.getAngle(clockCenter) + (Math.PI * 2)) % (Math.PI * 2) > Math.PI ? 1 : 0
 	      path.setAttribute('fill', 'none')
 	      path.setAttribute('d', `M${headPixels.x},${headPixels.y} A ${clockRadius} ${clockRadius} 0 ${bigArc} 1 ${endPixels.x} ${endPixels.y}`)
 	      path.setAttribute('stroke', wState[GRID_COLOR].getRgba())
