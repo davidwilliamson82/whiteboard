@@ -324,25 +324,32 @@
 	  return this.getAngle() * this.length()
 	}
 
-	getCalendarDays () {
+	getTimePadding () {
+	  return new Vector2(
+	    this.x * 80 / 1366,
+	    this.y * 40 / 768
+	  )
+	}
+
+	getCalendarDays (padding) {
 	  if (
-	    this.x > wState[TIME_PADDING].x
-	      && this.x < (wState[SCREEN_SIZE].x - wState[TIME_PADDING].x)
-	      && this.y > (wState[TIME_PADDING].y * 4)
-	      && this.y < (wState[SCREEN_SIZE].y - wState[TIME_PADDING].y)
+	    this.x > padding.x
+	      && this.x < (wState[SCREEN_SIZE].x - padding.x)
+	      && this.y > (padding.y * 4)
+	      && this.y < (wState[SCREEN_SIZE].y - padding.y)
 	  ) {
 	    return new Vector2(
-	      Math.floor((this.x - wState[TIME_PADDING].x) / wState[CALENDAR_OFFSET].x),
-	      Math.floor((this.y - wState[TIME_PADDING].y * 4) / wState[CALENDAR_OFFSET].y)
+	      Math.floor((this.x - padding.x) / wState[CALENDAR_OFFSET].x),
+	      Math.floor((this.y - padding.y * 4) / wState[CALENDAR_OFFSET].y)
 	    )	    
 	  }
 	}
 	
-	getPlannerHours () {
-	  if (this.x > wState[TIME_PADDING].x && this.y > wState[TIME_PADDING].y) {
+	getPlannerHours (padding) {
+	  if (this.x > padding.x && this.y > padding.y) {
 	    return new Vector2(
-	      Math.floor((this.x - wState[TIME_PADDING].x) / wState[PLANNER_OFFSET].x),
-	      (this.y - wState[TIME_PADDING].y) / (wState[PLANNER_OFFSET].y * 2)
+	      Math.floor((this.x - padding.x) / wState[PLANNER_OFFSET].x),
+	      (this.y - padding.y) / (wState[PLANNER_OFFSET].y * 2)
 	    )
 	  }
 	}
@@ -839,7 +846,6 @@
       const TOOLS = 'TOOLS'
       const DAYS = 'DAYS'
       const HOURS = 'HOURS'
-      const TIME_PADDING = 'TIME_PADDING'
       const CALENDAR_OFFSET = 'CALENDAR_OFFSET'
       const PLANNER_OFFSET = 'PLANNER_OFFSET'
       const CLOCK_ANGLES = 'CLOCK_ANGLES'
@@ -1807,7 +1813,6 @@
       defaultState[GRID_TYPE] = new Vector2(0, 0)
       defaultState[GRID_WIDTH] = 2
       defaultState[GRID_COLOR] = new Color('rgba(0, 0, 0, 0.4)')
-      defaultState[TIME_PADDING] = new Vector2(80, 40)
       defaultState[TOOL] = PAINT_BRUSH
       defaultState[TOOLS_COLOR] = new Color('rgba(128, 128, 128, 0.6)')
       defaultState[BRUSH] = 0
@@ -2460,14 +2465,18 @@
       ]
 
       const drawPlanner = (options) => {
+	const timePadding = wState[SCREEN_SIZE].getTimePadding()
 	const {
-	  origin=wState[VANISHING_POINT], 
-	  offset=wState[PLANNER_OFFSET]
+	  origin=timePadding, 
+	  offset=new Vector2(
+	    (wState[BOARD_SIZE].x - timePadding.x * 2) / 7,
+	    (wState[BOARD_SIZE].y - timePadding.y) / 48
+	  )
 	} = options
 	Object.assign(daysElement.style, {
-	  width: `${wState[BOARD_SIZE].x - wState[TIME_PADDING].x}px`,
+	  width: `${wState[BOARD_SIZE].x - timePadding.x}px`,
 	  top: '0px',
-	  left: `${wState[TIME_PADDING].x}px`,
+	  left: `${timePadding.x}px`,
 	  display: 'flex'
 	})
 	hoursElement.style.display = 'flex'
@@ -2525,6 +2534,7 @@
       }
 
       drawCalendar = () => {
+	const timePadding = wState[SCREEN_SIZE].getTimePadding()
 	const today = new Date()
 	const hasLeapDay = (dt) => {
 	  if (dt.getMonth() === 1) {
@@ -2564,37 +2574,37 @@
 	let daysOffset = (8 + today.getDay() - (today.getDate() % 7)) % 7
 	const rows = Math.ceil((daysOffset + theseDays) / 7)
 	wState[CALENDAR_OFFSET].set(
-	  (wState[BOARD_SIZE].x - wState[TIME_PADDING].x * 2) / 7,
-	  (wState[SCREEN_SIZE].y - wState[TIME_PADDING].y * 5) / rows
+	  (wState[BOARD_SIZE].x - timePadding.x * 2) / 7,
+	  (wState[SCREEN_SIZE].y - timePadding.y * 5) / rows
 	)
 	const printHead = new Vector2(
-	  wState[TIME_PADDING].x,
-	  wState[TIME_PADDING].y * 3
+	  timePadding.x,
+	  timePadding.y * 3
 	)
  
 	drawLine(
 	  GRID,
 	  new Vector2(
-	    wState[TIME_PADDING].x,
+	    timePadding.x,
 	    printHead.y
 	  ),
 	  new Vector2(
-	    wState[BOARD_SIZE].x - wState[TIME_PADDING].x,
+	    wState[BOARD_SIZE].x - timePadding.x,
 	    printHead.y
 	  ),
 	  wState[GRID_COLOR],
 	  6
 	)
-	printHead.y += wState[TIME_PADDING].y
+	printHead.y += timePadding.y
 	while (printHead.y < wState[SCREEN_SIZE].y) {
 	  drawLine(
 	    GRID,
 	    new Vector2(
-	      wState[TIME_PADDING].x,
+	      timePadding.x,
 	      printHead.y
 	    ),
 	    new Vector2(
-	      wState[BOARD_SIZE].x - wState[TIME_PADDING].x,
+	      wState[BOARD_SIZE].x - timePadding.x,
 	      printHead.y
 	    ),
 	    wState[GRID_COLOR],
@@ -2608,11 +2618,11 @@
 	    GRID,
 	    new Vector2(
 	      printHead.x,
-	      wState[TIME_PADDING].y * 3
+	      timePadding.y * 3
 	    ),
 	    new Vector2(
 	      printHead.x,
-	      wState[SCREEN_SIZE].y - wState[TIME_PADDING].y
+	      wState[SCREEN_SIZE].y - timePadding.y
 	    ),
 	    wState[GRID_COLOR],
 	    2
@@ -2624,8 +2634,8 @@
 	  GRID, 
 	  `${months[today.getMonth()].name}, ${today.getFullYear()}`,
 	  new Vector2(
-	    wState[TIME_PADDING].x + 5,
-	    wState[TIME_PADDING].y + 50
+	    timePadding.x + 5,
+	    timePadding.y + 50
 	  ),
 	  wState[GRID_COLOR],
 	  50
@@ -2636,8 +2646,8 @@
 	    GRID, 
 	    weekday,
 	    new Vector2(
-	      wState[TIME_PADDING].x + (index * wState[CALENDAR_OFFSET].x) + (wState[CALENDAR_OFFSET].x / 2) - (weekday.length * 10 * 0.59),
-	      wState[TIME_PADDING].y * 4 - 10
+	      timePadding.x + (index * wState[CALENDAR_OFFSET].x) + (wState[CALENDAR_OFFSET].x / 2) - (weekday.length * 10 * 0.59),
+	      timePadding.y * 4 - 10
 	    ),
 	    wState[GRID_COLOR],
 	    20
@@ -2645,8 +2655,8 @@
 	})
 	
 	printHead.set(
-	  wState[TIME_PADDING].x + (wState[CALENDAR_OFFSET].x * daysOffset),
-	  wState[TIME_PADDING].y * 4
+	  timePadding.x + (wState[CALENDAR_OFFSET].x * daysOffset),
+	  timePadding.y * 4
 	)
 	let thisDate = 1
 	let halfSpace
@@ -2658,16 +2668,16 @@
 	    weeksGone.setAttribute('id', 'weeksGone')
 	    weeksGone.setAttribute('stroke', 'none')
 	    weeksGone.setAttribute('fill', pastColor)
-	    weeksGone.setAttribute('x', wState[TIME_PADDING].x)
-	    weeksGone.setAttribute('y', wState[TIME_PADDING].y * 4)
-	    weeksGone.setAttribute('width', wState[BOARD_SIZE].x - wState[TIME_PADDING].x * 2)
-	    weeksGone.setAttribute('height', printHead.y - wState[TIME_PADDING].y * 4)
+	    weeksGone.setAttribute('x', timePadding.x)
+	    weeksGone.setAttribute('y', timePadding.y * 4)
+	    weeksGone.setAttribute('width', wState[BOARD_SIZE].x - timePadding.x * 2)
+	    weeksGone.setAttribute('height', printHead.y - timePadding.y * 4)
 	    layers[GRID].appendChild(weeksGone)
 	    const daysGone = document.createElementNS(svgNameSpace, 'rect')
 	    daysGone.setAttribute('id', 'daysGone')
 	    daysGone.setAttribute('stroke', 'none')
 	    daysGone.setAttribute('fill', pastColor)
-	    daysGone.setAttribute('x', wState[TIME_PADDING].x)
+	    daysGone.setAttribute('x', timePadding.x)
 	    daysGone.setAttribute('y', printHead.y)
 	    daysGone.setAttribute('width', today.getDay() * wState[CALENDAR_OFFSET].x)
 	    daysGone.setAttribute('height', wState[CALENDAR_OFFSET].y)
@@ -2685,7 +2695,7 @@
 	  )
 	  if ((thisDate + daysOffset) % 7 === 0) {
 	    printHead.set(
-	      wState[TIME_PADDING].x,
+	      timePadding.x,
 	      printHead.y + wState[CALENDAR_OFFSET].y
 	    )
 	  } else {
@@ -2703,7 +2713,11 @@
 	      window.innerWidth / 2,
 	      window.innerHeight / 2
 	    )
-	    const clockRadius = (Math.min(window.innerWidth, window.innerHeight) - wState[TIME_PADDING].y * 2) / 2
+
+	    const clockRadius = window.innerWidth > window.innerHeight 
+	      ? clockCenter.y * 0.9
+	      : clockCenter.x * 0.9
+
 	    clearLayer(GRID)
 	    drawVanishingPoint()
 	    let headAngle = Math.PI * 81/ 480
@@ -2839,16 +2853,7 @@
 	      angle: absoluteModulus(offset.hex.angle + Math.PI / 6, Math.PI / 3) - Math.PI / 6
 	    })
 	  },
-	  {
-	    origin: new Vector2(
-	      wState[TIME_PADDING].x,
-	      wState[TIME_PADDING].y
-	    ),
-	    offset: new Vector2(
-	      (wState[BOARD_SIZE].x - wState[TIME_PADDING].x) / 7,
-	      (wState[BOARD_SIZE].y - wState[TIME_PADDING].y) / 48
-	    )
-	  }
+	  {}
 	][type.x - 1])
       }
 
@@ -2869,22 +2874,7 @@
 	      magnitude: wState[HEX_MAGNITUDE],
 	      angle: wState[HEX_ANGLE]
 	    },
-	    time: [
-	      // getCalendarCell(),
-	      new Vector2(
-		(wState[BOARD_SIZE].x - wState[TIME_PADDING].x * 3) / 7,
-		(wState[BOARD_SIZE].y - wState[TIME_PADDING].y) / 24,
-	      ),
-	      new Vector2(
-		(wState[BOARD_SIZE].x - wState[TIME_PADDING].x * 3) / 7,
-		(wState[BOARD_SIZE].y - wState[TIME_PADDING].y) / 24,
-	      ),
-	      new Vector2(
-		(wState[BOARD_SIZE].x - wState[TIME_PADDING].x * 3) / 7,
-		(wState[BOARD_SIZE].y - wState[TIME_PADDING].y) / 24,
-	      )
-	      // wState[HEX_MAGNITUDE]
-	    ][type.y]
+	    time: wState[RECTANGULAR_OFFSET]
 	  })
 	  wState[GRID_TYPE].set(type)
 	  setWhiteboardState(GRID_TYPE)
@@ -3878,14 +3868,8 @@
       wState[GRID_COLOR] = new Color(wState[GRID_COLOR])
       wState[GRID_TYPE] = new Vector2(wState[GRID_TYPE])
       wState[PROBLEM_STATE] = new Vector2(0, 0)
-      wState[TIME_PADDING] = new Vector2(wState[TIME_PADDING])
       wState[RECTANGULAR_OFFSET] = new Vector2(wState[RECTANGULAR_OFFSET])
       wState[CALENDAR_OFFSET] = wState[RECTANGULAR_OFFSET].copy()
-      wState[PLANNER_OFFSET] = new Vector2(
-	(wState[BOARD_SIZE].x - wState[TIME_PADDING].x * 2) / 7,
-	(wState[BOARD_SIZE].y - wState[TIME_PADDING].y) / 48
-      )
-      wState[TIME_PADDING] = new Vector2(wState[TIME_PADDING])
       wState[BRUSHES].forEach((brush) => {
 	brush.color = new Color(brush.color)
       })
