@@ -672,7 +672,7 @@
 	   canvas[layer].height = wState[SCREEN_SIZE].y = obj.naturalHeight * scale
 	   } */
 	// context.clearRect(0, 0, wState[BOARD_SIZE].x, wState[BOARD_SIZE].y)
-	context.drawImage(obj, 0, 0, wState[BOARD_SIZE].x, wState[BOARD_SIZE].y)
+	context.drawImage(obj, 0, 0)
 	if (firstLoad) {
 	  // console.clear()
 	  console.log(`Wallpaper Image: ${wState[WALLPAPER_IMAGE]}`)
@@ -726,10 +726,18 @@
 	  let img = new Image()
 	  img.src = src
 	  displayImg(layers[layer], img)
-	  layers[layer].drawImage(img, 0, 0, wState[BOARD_SIZE].x, wState[BOARD_SIZE].y)
+	  layers[layer].drawImage(img, 0, 0, img.width, img.height)
 	}
       }
 
+      const loadMarksData = (data) => {
+	if (wState[SAVED_MARKS_DATA][data]) {
+	  marksHistory = [wState[SAVED_MARKS_DATA][data]]
+	  setImage(MARKS, wState[SAVED_MARKS_DATA][data])
+	} else {
+	  marksHistory = [dom[MARKS].toDataURL('image/png')]
+	}
+      }
       const toggleWallpaperStyle = () => {
 	if (dom[WALLPAPER].style.backgroundAttachment === 'fixed') {
 	  dom[WALLPAPER].style.backgroundAttachment = 'scroll'
@@ -3841,7 +3849,9 @@
       wState[SCREEN_CENTER] = wState[SCREEN_SIZE].scale(1 / 2)
       wState[BOARD_SIZE] = query[BOARD_SIZE]
 	? new Vector2(query[BOARD_SIZE]) 
-	: new Vector2(
+	: wState[BOARD_SIZE]
+	? new Vector2(wState[BOARD_SIZE])
+	:new Vector2(
 	  wState[SCREEN_SIZE].x * defaultState[BOARD_SCALE].x,
 	  wState[SCREEN_SIZE].y * defaultState[BOARD_SCALE].y
 	)
@@ -3901,12 +3911,8 @@
 	setImage(PROBLEM, query[PROBLEM_IMAGE], { margin: '2rem'})
 	dom[PROBLEM].style.display = 'initial'
       }
-      if (wState[SAVED_MARKS_DATA][query[MARKS_DATA]]) {
-	marksHistory = [wState[SAVED_MARKS_DATA][query[MARKS_DATA]]]
-	setImage(MARKS, wState[SAVED_MARKS_DATA][query[MARKS_DATA]])
-      } else {
-	marksHistory = [dom[MARKS].toDataURL('image/png')]
-      }
+      
+      query[MARKS_DATA] && loadMarksData(query[MARKS_DATA])
 
       document.querySelectorAll('.tool-button').forEach((button) => button.onclick = () => setWhiteboardState(TOOL, button.id))
     </script>
