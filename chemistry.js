@@ -321,7 +321,7 @@ const electronRestMass = 9.10938356e-31 // kg
 const bohrRadius = r1 = 5.2917721067e-11 // meters
 const gasConstant = R = 8.3144598 // liter-kilopascals per kelvin-mol
 const avogadro = 6.02214179e23
-const boltzman = 1.38064852e-23 // meters-squared kilograms square-root-seconds reciprocal-kelvin
+const boltzmann = 1.38064852e-23 // meters-squared kilograms square-root-seconds reciprocal-kelvin
 const atomicMassUnit = amu = 1.660539040e-27 // kg
 const constantVolume = R * 3 / 2 // for monoatomic ideal gas
 const constantPressure = R * 5 / 2 // for monoatomic ideal gas
@@ -702,6 +702,18 @@ class State {
 
 const sTP = new State(atm, 22.4, zeroC)
 
+const getGibbsFreeEnergy = (enthalpy, temperature, entropy) => enthalpy - temperature * entropy
+const getEnthalpy = (internalEnergy, pressure, volume) => internalEnergy + pressure * volume
+const approxDeltaEntropy = (atoms, vacancies) => {
+  const selfTimesLog = (x) => x * Math.log(x)
+  return boltzmann * (selfTimesLog(atoms + vacancies) - selfTimesLog(vacancies) - selfTimesLog(atoms))
+}
+
+const spontaneity = (changeInEnthalpy, temperature, changeInEntropy) => {
+  const changeInGibbs = changeInEnthalpy - temperature * changeInEntropy
+  return { changeInGibbs, spontaneous: changeInGibbs < 0 }
+}
+
 const acidBaseDissolution = (options) => {
   /* This function is used to infer variables associated with the dissolution of an acid or a base,
      when provided known values associated with the dissolution.
@@ -911,7 +923,7 @@ const sample = (compound, mass=1, moles=0, stoich=1) => {
 //   compound.stoichiometry = stoichiometry
 // }
 
-getEquilibrium = (reactants, products, volume) => {     
+const getEquilibrium = (reactants, products, volume) => {     
   // getStoichiometryNumbers(reactants, products)
   volume = volume || window.volume
   const reducer = (acc, val) => Math.pow(val.molarity, val.stoich) * acc
@@ -922,7 +934,7 @@ getEquilibrium = (reactants, products, volume) => {
 // MAKE LIST OF ELEMENTS
 // FOR EACH ELEMENT, MAKE EQUATION WITH A VARIABLE FOR EACH COMPOUND, AND PUT THE COEFFICIENT OF THAT ELEMENT'S SUBSCRIPT, MAKE THE PRODUCTS NEGATIVE
 // SOLVE THE SYSTEM OF EQUATIONS
-balanceEquation = (reactants, products) => {
+const balanceEquation = (reactants, products) => {
   getCompounds = (_compounds) => _compounds.map((compound) => {
     return typeof compound === 'string' ? comp(compound) : compound
   })
@@ -1087,7 +1099,6 @@ const plotConcentration = (
     ][order]
   }
 }
-
 
 // elements json
 const elements = [
