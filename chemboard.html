@@ -1338,7 +1338,8 @@
 		wState[MOUSE_DOWN_LOCATION],
 		constraints[constraint](toolLocation),
 		wState[TOOLS_COLOR],
-		wState[BRUSHES][wState[BRUSH]].width
+		wState[BRUSHES][wState[BRUSH]].width,
+		'butt'
 	      )
 	    }
 	  }
@@ -1360,7 +1361,8 @@
 		wState[MOUSE_DOWN_LOCATION],
 		constraints[constraint](toolLocation),
 		wState[BRUSHES][wState[BRUSH]].color,
-		wState[BRUSHES][wState[BRUSH]].width
+		wState[BRUSHES][wState[BRUSH]].width,
+		'butt'
 	      )
 	    }
 	    setWhiteboardState(ANGLE, constraints[constraint](toolLocation).getAngle(wState[MOUSE_DOWN_LOCATION]))
@@ -1934,7 +1936,7 @@
 	// layers[layer].stroke()
       }
       
-      const drawLine = function(layer, fv, tv, color, width) {
+      const drawLine = function(layer, fv, tv, color, width, lineCap=layers[MARKS].lineCap) {
 	if (layers[layer].nodeName === 'svg') {
 	  const line = document.createElementNS(svgNameSpace, 'line')
 	  line.setAttribute('x1', fv.x.toString())
@@ -1943,7 +1945,7 @@
 	  line.setAttribute('y2', tv.y.toString())
 	  line.setAttribute('stroke', color ? color.getRgba() : wState[`${layer}_COLOR`].getRgba())
 	  line.setAttribute('stroke-width', width || wState[`${layer}_WIDTH`])
-	  line.setAttribute('stroke-linecap', layers[MARKS].lineCap)
+	  line.setAttribute('stroke-linecap', lineCap)
 	  layers[layer].appendChild(line)
 	} else { // draw line on canvas
 	  if (color === undefined) {
@@ -2813,21 +2815,24 @@
 	      new Vector2({ magnitude: 30, angle: hourAngle + Math.PI }).add(clockCenter),
 	      new Vector2({ magnitude: clockRadius / 2, angle: hourAngle }).add(clockCenter),
 	      wState[GRID_COLOR],
-	      8
+	      8,
+	      'butt'
 	    )
 	    drawLine(
 	      GRID,
 	      new Vector2({ magnitude: 30, angle: minuteAngle + Math.PI }).add(clockCenter),
 	      new Vector2({ magnitude: clockRadius * 4 / 5, angle: minuteAngle }).add(clockCenter),
 	      wState[GRID_COLOR],
-	      8
+	      8,
+	      'butt'
 	    )
 	    drawLine(
 	      GRID,
 	      new Vector2({ magnitude: 40, angle: secondAngle + Math.PI }).add(clockCenter),
 	      new Vector2({ magnitude: clockRadius * 4 / 6, angle: secondAngle }).add(clockCenter),
 	      wState[GRID_COLOR],
-	      2
+	      2,
+	      'butt'
 	    )
 	  }
 	}, 1000);
