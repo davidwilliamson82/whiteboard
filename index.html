@@ -331,7 +331,14 @@
 	  )
 	}
 
-	getCalendarDays (padding) {
+	getPlannerOffset (padding=wState[SCREEN_SIZE].getTimePadding()) {
+	  return new Vector2(
+	    (this.x - padding.x) / 7,
+	    (this.y - padding.y) / 48
+	  )
+	}
+
+	getCalendarDays (padding=wState[SCREEN_SIZE].getTimePadding()) {
 	  if (
 	    this.x > padding.x
 	      && this.x < (wState[SCREEN_SIZE].x - padding.x)
@@ -345,25 +352,41 @@
 	  }
 	}
 	
-	getPlannerHours (padding) {
+	getPlannerHours (padding=wState[SCREEN_SIZE].getTimePadding()) {
 	  if (this.x > padding.x && this.y > padding.y) {
+	    const offset = wState[BOARD_SIZE].getPlannerOffset()
 	    return new Vector2(
-	      Math.floor((this.x - padding.x) / wState[PLANNER_OFFSET].x),
-	      (this.y - padding.y) / (wState[PLANNER_OFFSET].y * 2)
+	      Math.floor((this.x - padding.x) / offset.x),
+	      (this.y - padding.y) / (offset.y * 2)
 	    )
 	  }
 	}
 	
 	getClockTime () {
-	  return ((this.getAngle(wState[SCREEN_CENTER]) + (Math.PI / 2)) * 30 / Math.PI) % 60
+	  return ((this.getAngle(getClockCenter()) + (Math.PI / 2)) * 30 / Math.PI) % 60
 	}
 
 	copy () {
 	  return new Vector2(this.x, this.y)
 	}
 
+	equals (v) {
+	  return ((this.x === v.x) && (this.y === v.y))
+	}
+
 	add (v) {
+	  v = v || new Vector2(0, 0)
 	  return new Vector2(this.x + v.x, this.y + v.y)
+	}
+
+	subtract (v) {
+	  v = v || new Vector2(0, 0)
+	  return new Vector2(this.x - v.x, this.y - v.y)
+	}
+
+	getMidpoint (v) {
+	  v = v || new Vector2(0, 0)
+	  return this.add(v.subtract(this).scale(1 / 2))
 	}
 
 	scale (s) {
@@ -374,9 +397,7 @@
 	}
 
 	length (v) {
-	  if (!v) {
-	    v = new Vector2(0, 0)
-	  }
+	  v = v || new Vector2(0, 0)
 	  return Math.hypot(this.x - v.x, this.y - v.y)
 	}
 	
@@ -889,6 +910,7 @@
       const LINE_SPACING = 'LINE_SPACING' // number
       const TAB_WIDTH = 'TAB_WIDTH'
       const FILL_ACTIVE = 'FILL_ACTIVE' // Boolean
+      const BEZIER_ACTIVE = 'BEZIER_ACTIVE' // Boolean
       const ANGLE = 'ANGLE' // Number
       const ERASE_RADIUS = 'ERASE_RADIUS' // Number
       const MOUSE_DOWN_LOCATION = 'MOUSE_DOWN_LOCATION' // Vector2 *
@@ -921,6 +943,7 @@
       const ANSWER = 'ANSWER'
       const OPERAND = 'OPERAND'
       const DICTIONARY_WORD = 'DICTIONARY_WORD'
+      const CALENDAR_API_KEY = 'CALENDAR_API_KEY'
 
       const dom = {}
       dom[WALLPAPER] = document.getElementById(WALLPAPER)
@@ -1076,11 +1099,11 @@
 	  
 	  const offset = {}
 	  if ((gridType.x === 3) && (gridType.y === 2)) {
-	    offset.angle = toolLocation.getAngle(wState[SCREEN_CENTER])
+	    offset.angle = toolLocation.getAngle(getClockCenter())
 	    offset.location = new Vector2({
-	      angle: toolLocation.getAngle(wState[SCREEN_CENTER]),
-	      magnitude: mouseDown.length(wState[SCREEN_CENTER])
-	    }).add(wState[SCREEN_CENTER])
+	      angle: toolLocation.getAngle(getClockCenter()),
+	      magnitude: mouseDown.length(getClockCenter())
+	    }).add(getClockCenter())
 	  } else {
 	    offset.angle = toolLocation.getAngle(mouseDown)
 	    offset.location = toolLocation
@@ -1102,7 +1125,10 @@
       
       const tools = {}
       tools[PAINT_BRUSH] = {
-	mouseDown: (toolLocation) => {},
+	mouseDown: (toolLocation) => {
+	  layers[MARKS].beginPath()
+	  layers[MARKS].moveTo(toolLocation.x, toolLocation.y)
+	},
 	mouseMove: (toolLocation) => {
 	  const head = wState[PRINT_HEAD_LOCATION]
 	  const tool = constraints[constraint](toolLocation)
@@ -1124,13 +1150,17 @@
 	      clearLayer(MARKS)
 	      layers[MARKS].restore()
 	    } else {
-	      layers[MARKS].lineJoin = layers[MARKS].lineCap = 'round';
-	      strokeLine(MARKS, wState[PRINT_HEAD_LOCATION], tool)
+	      layers[MARKS].lineJoin = layers[MARKS].lineCap = 'round'
+	      
+	      brushStroke(MARKS, wState[PRINT_HEAD_LOCATION], tool)
+	      
 	    }
 	    wState[PRINT_HEAD_LOCATION].set(tool.x, tool.y)
 	  }
 	},
 	mouseUp: (toolLocation) => {
+	  clearLayer(TOOLS)
+	  layers[MARKS].stroke()
 	  updateMarksHistory()
 	}
       }
@@ -1362,11 +1392,10 @@
 	mouseMove: (toolLocation) => {
 	  clearLayer(TOOLS, true)
 	  if (wState[GRID_TYPE].x === 3 && wState[GRID_TYPE].y === 2) {
-	    const center = wState[SCREEN_CENTER]
-	    const radius = wState[MOUSE_DOWN_LOCATION].length(center)
-	    const end = constrainArc(center, wState[MOUSE_DOWN_LOCATION], toolLocation)
+	    const radius = wState[MOUSE_DOWN_LOCATION].length(getClockCenter())
+	    const end = constrainArc(getClockCenter(), wState[MOUSE_DOWN_LOCATION], toolLocation)
 	    const measurementElement = document.createElementNS(svgNameSpace, 'path')
-	    const bigArc = (toolLocation.getAngle(center) - wState[MOUSE_DOWN_LOCATION].getAngle(center) + (Math.PI * 2)) % (Math.PI * 2) > Math.PI ? 1 : 0
+	    const bigArc = (toolLocation.getAngle(getClockCenter()) - wState[MOUSE_DOWN_LOCATION].getAngle(getClockCenter()) + (Math.PI * 2)) % (Math.PI * 2) > Math.PI ? 1 : 0
 	    measurementElement.setAttribute('id', 'measurement')
 	    measurementElement.setAttribute('fill', 'none')
 	    measurementElement.setAttribute('d', `M${wState[MOUSE_DOWN_LOCATION].x},${wState[MOUSE_DOWN_LOCATION].y} A ${radius} ${radius} 0 ${bigArc} 1 ${end.x} ${end.y}`)
@@ -1818,7 +1847,7 @@
       defaultState[RECTANGULAR_OFFSET] = new Vector2(60, 60) // Grid separated to four variables, for easy query strings.
       defaultState[HEX_MAGNITUDE] = 60
       defaultState[HEX_ANGLE] = Math.PI / 6
-      defaultState[GRID_TYPE] = new Vector2(0, 0)
+      defaultState[GRID_TYPE] = globalOrigin.copy()
       defaultState[GRID_WIDTH] = 2
       defaultState[GRID_COLOR] = new Color('rgba(0, 0, 0, 0.4)')
       defaultState[TOOL] = PAINT_BRUSH
@@ -1838,6 +1867,7 @@
 	{ width: 2, color: new Color('hsla(0, 0%, 100%, 1.0)') }
       ]
       defaultState[FILL_ACTIVE] = false
+      defaultState[BEZIER_ACTIVE] = false
       defaultState[FONT] = 'Courier New'
       defaultState[FONT_HEIGHT] = 10
       defaultState[FONT_WIDTH] = 30
@@ -1850,7 +1880,11 @@
       defaultState[MOUSE_MOVE_LOCATION] = globalOrigin.copy()
       defaultState[MOUSE_UP_LOCATION] = globalOrigin.copy()
       defaultState[PRINT_HEAD_LOCATION] = globalOrigin.copy()
-      defaultState[MEASUREMENT] = globalOrigin.copy()
+      defaultState[MEASUREMENT] = { 
+	mouseUp: globalOrigin.copy(),
+	mouseDown: globalOrigin.copy(),
+	gridType: globalOrigin.copy()
+      }
       defaultState[DEFAULT_WALLPAPER] = 'default-wallpaper.png'
       defaultState[MARKS_DATA] = 'untitled'
       defaultState[SAVED_MARKS_DATA] = {}
@@ -1860,6 +1894,7 @@
       defaultState[ANSWER] = defaultState[PROBLEM_LIMITS][1]
       defaultState[OPERAND] = Math.floor(defaultState[ANSWER] / 2)
       defaultState[DICTIONARY_WORD] = 'apple'
+      defaultState[CALENDAR_API_KEY] = ''
 
       const updateMarksHistory = (dataURL=dom[MARKS].toDataURL('image/png')) => {
 	if (marksHistory.length < wState[MARKS_HISTORY_LENGTH]) {
@@ -1874,10 +1909,29 @@
       // Prepare Objects for Grid
 
       const strokeLine = (layer, fv, tv) => {
-	  layers[layer].beginPath()
-	  layers[layer].moveTo(fv.x, fv.y)
-	  layers[layer].lineTo(tv.x, tv.y)
-	  layers[layer].stroke()
+	layers[layer].beginPath()
+	layers[layer].moveTo(fv.x, fv.y)
+	layers[layer].lineTo(tv.x, tv.y)
+	layers[layer].stroke()
+      }
+
+      const brushStroke = (layer, fv, tv) => {
+	console.log('bezier!')
+	const midpoint = fv.getMidpoint(tv)
+	drawLine(
+	  TOOLS, 
+	  fv, 
+	  tv, 
+	  wState[BRUSHES][wState[BRUSH]].color, 
+	  wState[BRUSHES][wState[BRUSH]].width
+	)
+	// layers[tools].beginPath()
+	// layers[layer].moveTo(fv.x, fv.y)
+	/* layers[layer].quadraticCurveTo(
+	   midpoint.x, midpoint.y,
+	   tv.x, tv.y) */
+	layers[layer].lineTo(tv.x, tv.y)
+	// layers[layer].stroke()
       }
       
       const drawLine = function(layer, fv, tv, color, width) {
@@ -1889,6 +1943,7 @@
 	  line.setAttribute('y2', tv.y.toString())
 	  line.setAttribute('stroke', color ? color.getRgba() : wState[`${layer}_COLOR`].getRgba())
 	  line.setAttribute('stroke-width', width || wState[`${layer}_WIDTH`])
+	  line.setAttribute('stroke-linecap', layers[MARKS].lineCap)
 	  layers[layer].appendChild(line)
 	} else { // draw line on canvas
 	  if (color === undefined) {
@@ -1906,10 +1961,16 @@
 	const angle = tv.getAngle(fv)
 	const leftBarb = new Vector2({ angle: Math.atan(1 / 3) + angle + Math.PI, magnitude: width * Math.sqrt(20) }).add(tv)
 	const rightBarb = new Vector2({ angle: Math.atan(-1 / 3) + angle + Math.PI, magnitude: width * Math.sqrt(20) }).add(tv)
-	const base = new Vector2({ angle: angle + Math.PI, magnitude: width * 3 }).add(tv)
+	const leftCave = new Vector2({ angle: angle + Math.PI, magnitude: width * 3 })
+	  .add(new Vector2({ angle: angle - Math.PI * 3 / 4, magnitude: width * Math.sqrt(2) / 2 })).add(tv)
+	const rightCave = new Vector2({ angle: angle + Math.PI, magnitude: width * 3 })
+	  .add(new Vector2({ angle: angle + Math.PI * 3 / 4, magnitude: width * Math.sqrt(2) / 2 })).add(tv)
+	const leftBase = new Vector2({ angle: angle - Math.PI / 2, magnitude: width / 2 }).add(fv)
+	const rightBase = new Vector2({ angle: angle + Math.PI / 2, magnitude: width / 2 }).add(fv)
+
 	if (layers[layer].nodeName === 'svg') {
 	  const polygon = document.createElementNS(svgNameSpace, 'polygon')
-	  polygon.setAttribute('points', `${tv.x},${tv.y} ${leftBarb.x},${leftBarb.y} ${base.x},${base.y} ${rightBarb.x},${rightBarb.y}`)
+	  polygon.setAttribute('points', `${tv.x},${tv.y} ${leftBarb.x},${leftBarb.y} ${leftCave.x},${leftCave.y} ${leftBase.x},${leftBase.y} ${rightBase.x},${rightBase.y} ${rightCave.x},${rightCave.y} ${rightBarb.x},${rightBarb.y}`)
 	  polygon.setAttribute('fill', color ? color.getRgba() : wState[`${layer}_COLOR`].getRgba())
 	  polygon.setAttribute('stroke', color ? color.getRgba() : wState[`${layer}_COLOR`].getRgba())
 	  polygon.setAttribute('stroke-width', 0)
@@ -1922,13 +1983,15 @@
 	  layers[layer].beginPath()
 	  layers[layer].moveTo(tv.x, tv.y)
 	  layers[layer].lineTo(leftBarb.x, leftBarb.y)
-	  layers[layer].lineTo(base.x, base.y)
+	  layers[layer].lineTo(leftCave.x, leftCave.y)
+	  layers[layer].lineTo(leftBase.x, leftBase.y)
+	  layers[layer].lineTo(rightBase.x, rightBase.y)
+	  layers[layer].lineTo(rightCave.x, rightCave.y)
 	  layers[layer].lineTo(rightBarb.x, rightBarb.y)
 	  layers[layer].closePath()
 	  layers[layer].fill()
 	  layers[layer].fillStyle = wState[BRUSHES][wState[BRUSH]].color.getRgba()
 	}
-	drawLine(layer, fv, base, color, width)
       }
 
       const drawText = function(layer, content, position, color, size) {
@@ -2476,10 +2539,7 @@
 	const timePadding = wState[SCREEN_SIZE].getTimePadding()
 	const {
 	  origin=timePadding, 
-	  offset=new Vector2(
-	    (wState[BOARD_SIZE].x - timePadding.x) / 7,
-	    (wState[BOARD_SIZE].y - timePadding.y) / 48
-	  )
+	  offset=wState[BOARD_SIZE].getPlannerOffset()
 	} = options
 	Object.assign(daysElement.style, {
 	  width: `${wState[BOARD_SIZE].x - timePadding.x}px`,
@@ -2713,14 +2773,16 @@
 	}
       }
 
+      const getClockCenter = () => new Vector2(
+	window.innerWidth / 2,
+	window.innerHeight / 2
+      )
+
       drawClock = () => {
 	daysElement.style.display = hoursElement.style.display = 'none'
 	setInterval(() => {
 	  if (wState[GRID_TYPE].x === 3 && wState[GRID_TYPE].y === 2) {
-	    const clockCenter = new Vector2(
-	      window.innerWidth / 2,
-	      window.innerHeight / 2
-	    )
+	    const clockCenter = getClockCenter()
 
 	    const clockRadius = window.innerWidth > window.innerHeight 
 	      ? clockCenter.y * 0.9
@@ -3621,6 +3683,8 @@
 	case 'P':
 	  if (wState[TOOL] !== TEXT) {
 	    clearLayer(TOOLS)
+	    layers[MARKS].lineJoin = 'round'
+	    layers[MARKS].lineCap = 'round'
 	    setWhiteboardState(TOOL, PAINT_BRUSH)
 	    lastTool = PAINT_BRUSH
 	  }
@@ -3629,6 +3693,8 @@
 	case 'R':
 	  if (wState[TOOL] !== TEXT && !controlIsDown) {
 	    clearLayer(TOOLS)
+	    layers[MARKS].lineJoin = 'miter'
+	    layers[MARKS].lineCap = 'butt'
 	    setWhiteboardState(TOOL, RECTANGLE)
 	    lastTool = RECTANGLE
 	  }
@@ -3645,6 +3711,8 @@
 	case 'L':
 	  if (wState[TOOL] !== TEXT) {
 	    clearLayer(TOOLS)
+	    layers[MARKS].lineJoin = 'miter'
+	    layers[MARKS].lineCap = 'butt'
 	    setWhiteboardState(TOOL, LINE)
 	    lastTool = LINE
 	  }
@@ -3825,9 +3893,10 @@
       let constraint = NONE
       let storedFunctions = []
       let previousVanishingPoint = globalOrigin.copy()
+      let currentMouseLocation = globalOrigin.copy()
+      let bezierControlPoint = null
       let previousOffsetMagnitude
       let historyIndex = 0
-      let currentMouseLocation = globalOrigin.copy()
       let marksHistory
       let firstLoad = true
       let vanishingPointVisible = false
@@ -3873,7 +3942,11 @@
       wState[MOUSE_MOVE_LOCATION] = new Vector2(wState[MOUSE_MOVE_LOCATION])
       wState[MOUSE_UP_LOCATION] = new Vector2(wState[MOUSE_UP_LOCATION])
       wState[PRINT_HEAD_LOCATION] = new Vector2(wState[PRINT_HEAD_LOCATION])
-      wState[MEASUREMENT] = new Vector2(wState[MEASUREMENT])
+      wState[MEASUREMENT] = {
+	mouseUp: new Vector2(wState[MEASUREMENT].mouseUp),
+	mouseDown: new Vector2(wState[MEASUREMENT].mouseDown),
+	gridType: new Vector2(wState[MEASUREMENT].gridType)
+      }
       wState[OVERLAY_COLOR] = new Color(wState[OVERLAY_COLOR])
       wState[GRID_COLOR] = new Color(wState[GRID_COLOR])
       wState[GRID_TYPE] = new Vector2(wState[GRID_TYPE])
@@ -3898,8 +3971,15 @@
 
       dom[PROBLEM].style.display = 'none'
       dom[PALETTE].style.display = 'none'
-      layers[MARKS].lineJoin = 'round'
-      layers[MARKS].lineCap = 'round'
+      
+      if (wState[TOOL] === PAINT_BRUSH) {
+	layers[MARKS].lineJoin = 'round'
+	layers[MARKS].lineCap = 'round'
+      } else {
+	layers[MARKS].lineJoin = 'miter'
+	layers[MARKS].lineCap = 'butt'
+      }
+      
 
       query[MARKS_IMAGE] && setImage(MARKS, query[MARKS_IMAGE])
       
