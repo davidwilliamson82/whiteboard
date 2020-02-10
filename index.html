@@ -1160,7 +1160,7 @@
 	},
 	mouseUp: (toolLocation) => {
 	  clearLayer(TOOLS)
-	  layers[MARKS].stroke()
+	  if (!spaceIsDown) { layers[MARKS].stroke() }
 	  updateMarksHistory()
 	}
       }
@@ -1918,7 +1918,6 @@
       }
 
       const brushStroke = (layer, fv, tv) => {
-	console.log('bezier!')
 	const midpoint = fv.getMidpoint(tv)
 	drawLine(
 	  TOOLS, 
