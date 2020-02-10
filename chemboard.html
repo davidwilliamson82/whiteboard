@@ -1142,7 +1142,7 @@
 	      layers[MARKS].save()
 	      layers[MARKS].beginPath()
 	      layers[MARKS].moveTo(head.x + offset.x, head.y + offset.y)
-	      layers[MARKS].arc(head.x, head.y, wState[ERASE_RADIUS], angle, angle + Math.PI, false)
+	      layers[MARKS ].arc(head.x, head.y, wState[ERASE_RADIUS], angle, angle + Math.PI, false)
 	      layers[MARKS].lineTo(tool.x - offset.x, tool.y - offset.y)
 	      layers[MARKS].arc(tool.x, tool.y, wState[ERASE_RADIUS], angle + Math.PI, angle, false)
 	      layers[MARKS].closePath()
@@ -3800,6 +3800,9 @@
 	switch (event.key) {
 	case ' ':
 	  if (wState[TOOL] !== TEXT) {
+	    if (wState[TOOL] === PAINT_BRUSH) {
+	      layers[MARKS].beginPath()
+	    }
 	    spaceIsDown = false
 	    break
 	  }
