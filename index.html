@@ -701,6 +701,42 @@
 	firstLoad = false
       }
 
+      const getCustomBoard = (width, height, zoom=true) => {
+	const imageAspectRatio = width / height
+	const viewAspectRatio = zoom !== 'false' 
+	  ? wState[SCREEN_SIZE].y / wState[SCREEN_SIZE].x
+	  : window.innerHeight / window.innerWidth
+	const imageIsTall = imageAspectRatio > viewAspectRatio
+	const wallpaperDisplay = new Vector2(0, 0)
+	if (zoom !== 'false') {
+	  if (imageIsTall) {
+	    wallpaperDisplay.x = Math.max(wState[SCREEN_SIZE].x, width)
+	    wallpaperDisplay.y = wallpaperDisplay.x * imageAspectRatio
+	  } else {
+	    wallpaperDisplay.y = Math.max(wState[SCREEN_SIZE].y, height)
+	    wallpaperDisplay.x = wallpaperDisplay.y / imageAspectRatio
+	  }
+	  wState[BOARD_SIZE].set(wallpaperDisplay)
+	  dom[WALLPAPER].style.backgroundSize = 'cover'
+	  dom[WALLPAPER].style.backgroundPosition = 'center'
+	} else {
+	  if (imageIsTall) {
+	    wallpaperDisplay.y = window.innerHeight
+	    wallpaperDisplay.x = wallpaperDisplay.y / imageAspectRatio
+	  } else {
+	    wallpaperDisplay.x = window.innerWidth
+	    wallpaperDisplay.y = wallpaperDisplay.x * imageAspectRatio
+	  }
+	  wState[BOARD_SIZE].set(
+	    Math.max(wallpaperDisplay.x, window.innerWidth),
+	    Math.max(wallpaperDisplay.y, window.innerHeight)
+	  )
+	  dom[WALLPAPER].style.backgroundSize = `${wallpaperDisplay.x}px ${wallpaperDisplay.y}px`
+	  dom[WALLPAPER].style.backgroundPosition = 'top left'
+	}
+	return wallpaperDisplay
+      }
+
       const setImage = (layer, src, style) => {
 	if (dom[layer].nodeName === 'DIV') {
 	  if (layer === WALLPAPER) {
@@ -713,9 +749,9 @@
 	      wallpaperImg.onload = () => {
 		console.log('wallpaperImg: ', wallpaperImg)
 		console.log('wallpaerImg.naturalWidth, wallpaperImg.naturalHeight: ', wallpaperImg.naturalWidth, wallpaperImg.naturalHeight)
-		const imageIsTall = (wallpaperImg.naturalHeight / wallpaperImg.naturalWidth) > (wState[SCREEN_SIZE].y / wState[SCREEN_SIZE].x)
-		dom[WALLPAPER].style.backgroundSize = `${imageIsTall ? wallpaperImg.naturalWidth * (wState[SCREEN_SIZE].y / wallpaperImg.naturalHeight) : wState[SCREEN_SIZE].x}px ${imageIsTall ? wState[SCREEN_SIZE].y : wallpaperImg.naturalHeight * (wState[SCREEN_SIZE].x / wallpaperImg.naturalWidth)}px`
-		dom[WALLPAPER].style.backgroundPosition = 'center'
+		// const imageIsTall = (wallpaperImg.naturalHeight / wallpaperImg.naturalWidth) > (wState[SCREEN_SIZE].y / wState[SCREEN_SIZE].x)
+		const wallpaperDisplay = getCustomBoard(wallpaperImg.naturalWidth, wallpaperImg.naturalHeight, query[WALLPAPER_ZOOM])
+		dom[WALLPAPER].style.backgroundAttachment = 'scroll'
 	      }
 	    } else {
 	      dom[WALLPAPER].style.backgroundSize = `${wState[SCREEN_SIZE].x}px ${wState[SCREEN_SIZE].y}px`
@@ -759,18 +795,19 @@
 	  marksHistory = [dom[MARKS].toDataURL('image/png')]
 	}
       }
-      const toggleWallpaperStyle = () => {
-	if (dom[WALLPAPER].style.backgroundAttachment === 'fixed') {
-	  dom[WALLPAPER].style.backgroundAttachment = 'scroll'
-	} else {
-	  dom[WALLPAPER].style.backgroundAttachment = 'fixed'
-	}
-	if (dom[WALLPAPER].style.backgroundSize === `${wState[SCREEN_SIZE].x}px ${wState[SCREEN_SIZE].y}px`) {
-	  dom[WALLPAPER].style.backgroundSize = 'cover'
-	} else {
-	  dom[WALLPAPER].style.backgroundSize = `${wState[SCREEN_SIZE].x}px ${wState[SCREEN_SIZE].y}px`
-	}
-      }
+
+      /* const toggleWallpaperStyle = () => {
+	 if (dom[WALLPAPER].style.backgroundAttachment === 'fixed') {
+	 dom[WALLPAPER].style.backgroundAttachment = 'scroll'
+	 } else {
+	 dom[WALLPAPER].style.backgroundAttachment = 'fixed'
+	 }
+	 if (dom[WALLPAPER].style.backgroundSize === `${wState[SCREEN_SIZE].x}px ${wState[SCREEN_SIZE].y}px`) {
+	 dom[WALLPAPER].style.backgroundSize = 'cover'
+	 } else {
+	 dom[WALLPAPER].style.backgroundSize = `${wState[SCREEN_SIZE].x}px ${wState[SCREEN_SIZE].y}px`
+	 }
+       * } */
 
       const clearLayer = (input, removeMeasurement) => {
 	const layer = typeof input === 'string' ?  layers[input] : input
@@ -890,6 +927,7 @@
       const BOARD_SCALE = 'BOARD_SCALE' // Vector2 *
       const DEFAULT_WALLPAPER = '' // String
       const WALLPAPER_IMAGE = 'WALLPAPER_IMAGE' // String, not stored
+      const WALLPAPER_ZOOM = 'WALLPAPER_ZOOM'
       const OVERLAY_COLOR = 'OVERLAY_COLOR' // Color *
       const GRID_TYPE = 'GRID_TYPE'
       const RECTANGULAR_OFFSET = 'RECTANGULAR_OFFSET'
@@ -1128,6 +1166,7 @@
 	mouseDown: (toolLocation) => {
 	  layers[MARKS].beginPath()
 	  layers[MARKS].moveTo(toolLocation.x, toolLocation.y)
+	  dom[TOOLS].style.opacity = wState[BRUSHES][wState[BRUSH]].color.alpha
 	},
 	mouseMove: (toolLocation) => {
 	  const head = wState[PRINT_HEAD_LOCATION]
@@ -1160,6 +1199,7 @@
 	},
 	mouseUp: (toolLocation) => {
 	  clearLayer(TOOLS)
+	  dom[TOOLS].style.opacity = 1
 	  if (!spaceIsDown) { layers[MARKS].stroke() }
 	  updateMarksHistory()
 	}
@@ -1843,7 +1883,7 @@
       const defaultState = {}
       defaultState[DOCUMENT_TITLE] = 'Whiteboard'
       defaultState[SCREEN_SIZE] = new Vector2(1366, 768)
-      defaultState[BOARD_SCALE] = new Vector2(1, 2)
+      defaultState[BOARD_SIZE] = new Vector2(1366, 2304)
       defaultState[ZOOM] = 1
       defaultState[OVERLAY_COLOR] = new Color('rgba(255, 255, 255, 0.0)')
       defaultState[RECTANGULAR_OFFSET] = new Vector2(60, 60) // Grid separated to four variables, for easy query strings.
@@ -1923,7 +1963,7 @@
 	  TOOLS, 
 	  fv, 
 	  tv, 
-	  wState[BRUSHES][wState[BRUSH]].color, 
+	  new Color(wState[BRUSHES][wState[BRUSH]].color).modify({ alpha: 1 }), 
 	  wState[BRUSHES][wState[BRUSH]].width
 	)
 	// layers[tools].beginPath()
@@ -3927,10 +3967,7 @@
 	? new Vector2(query[BOARD_SIZE]) 
 	: wState[BOARD_SIZE]
 	? new Vector2(wState[BOARD_SIZE])
-	:new Vector2(
-	  wState[SCREEN_SIZE].x * defaultState[BOARD_SCALE].x,
-	  wState[SCREEN_SIZE].y * defaultState[BOARD_SCALE].y
-	)
+	: defaultState[BOARD_SIZE]
       wState[WALLPAPER_IMAGE] = query[WALLPAPER_IMAGE] || getCollection(wState[SCREEN_SIZE])
       wState[ANGLE] = Number(wState[ANGLE])
       wState[BRUSH] = Number(wState[BRUSH])
