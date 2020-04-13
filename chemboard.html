@@ -787,6 +787,11 @@
 	}
       }
 
+      const saveMarksData = (name) => {
+	wState[SAVED_MARKS_DATA][name] = dom[MARKS].toDataURL('image/png')
+	setWhiteboardState(SAVED_MARKS_DATA, wState[SAVED_MARKS_DATA])
+      };
+
       const loadMarksData = (data) => {
 	if (wState[SAVED_MARKS_DATA][data]) {
 	  marksHistory = [wState[SAVED_MARKS_DATA][data]]
@@ -959,6 +964,7 @@
       const FUNCTIONS = 'FUNCTIONS' // temporary array
       const MARKS_DATA = 'MARKS_DATA' // String
       const SAVED_MARKS_DATA = 'SAVED_MARKS_DATA' // Object: { <name>: <dataURI> }
+      const AUTOSAVE = 'AUTOSAVE'
       const MARKS_HISTORY_LENGTH = 'MARKS_HISTORY_LENGTH'
 
       const NONE = 'NONE'
@@ -1939,6 +1945,9 @@
       defaultState[CALENDAR_API_KEY] = ''
 
       const updateMarksHistory = (dataURL=dom[MARKS].toDataURL('image/png')) => {
+	if (query[AUTOSAVE] && query[MARKS_DATA]) {
+	  saveMarksData(query[MARKS_DATA]);
+	}
 	if (marksHistory.length < wState[MARKS_HISTORY_LENGTH]) {
 	  historyIndex += 1
 	} else {
@@ -3477,8 +3486,7 @@
 	const name = prompt('Please name this data', wState[MARKS_DATA])
 	clearLayer(TOOLS)
 	if (name !== null) {
-	  wState[SAVED_MARKS_DATA][name] = dom[MARKS].toDataURL('image/png')
-	  setWhiteboardState(SAVED_MARKS_DATA, wState[SAVED_MARKS_DATA])
+	  saveMarksData(name)
 	  console.log(`Saved ${name}`)
 	}
       })
@@ -3487,6 +3495,145 @@
 	hoursElement.style.top = `${-window.pageYOffset + 40}px`
 	daysElement.style.left = `${-window.pageXOffset + 80}px`
       })
+
+      
+
+      // these are actions which need to be performed by either the keyboard or gamepad
+      const commands = {
+	cycleGrids: () => {
+	  if (wState[TOOL] !== TEXT) {
+	    wState[GRID_TYPE].set((wState[GRID_TYPE].x + 1) % 4, wState[GRID_TYPE].y)
+	    setGrid()
+	  }
+	},
+	cycleGridStyles: () => {
+	  if (wState[TOOL] !== TEXT) {
+	    wState[GRID_TYPE].set(wState[GRID_TYPE].x, (wState[GRID_TYPE].y + 1) % 3)
+	    setGrid()
+	  }
+	},
+	useRectangle: () => {
+	  if (wState[TOOL] !== TEXT && !controlIsDown) {
+	    clearLayer(TOOLS)
+	    layers[MARKS].lineJoin = 'miter'
+	    layers[MARKS].lineCap = 'butt'
+	    setWhiteboardState(TOOL, RECTANGLE)
+	    lastTool = RECTANGLE
+	  }
+	},
+	useLine: () => {
+	  if (wState[TOOL] !== TEXT) {
+	    clearLayer(TOOLS)
+	    layers[MARKS].lineJoin = 'miter'
+	    layers[MARKS].lineCap = 'butt'
+	    setWhiteboardState(TOOL, LINE)
+	    lastTool = LINE
+	  }
+	},
+	useEllipse: () => {
+	  if (wState[TOOL] !== TEXT) {
+	    clearLayer(TOOLS)
+	    setWhiteboardState(TOOL, ELLIPSE)
+	    lastTool = ELLIPSE
+	  }
+	},
+	usePaintbrush: () => {
+	  if (wState[TOOL] !== TEXT) {
+	    clearLayer(TOOLS)
+	    layers[MARKS].lineJoin = 'round'
+	    layers[MARKS].lineCap = 'round'
+	    setWhiteboardState(TOOL, PAINT_BRUSH)
+	    lastTool = PAINT_BRUSH
+	  }
+	},
+	vanishingDown: () => {
+	  if (wState[TOOL] !== TEXT && !controlIsDown) {
+	    setVanishingPoint(wState[MOUSE_MOVE_LOCATION].x, wState[MOUSE_MOVE_LOCATION].y)
+	    wState[TOOL] = GRID	      
+	    vanishingPointVisible = true
+	    drawVanishingPoint()
+	  }
+	},
+	vanishingUp: () => {
+	  if (wState[TOOL] !== TEXT) { 
+	    if (controlIsDown) {
+	      paste(MARKS, clipboard, currentMouseLocation)
+	    } else {
+	      wState[TOOL] = lastTool
+	    }
+	  }
+	},
+	redo: () => {
+	  historyIndex += 1
+	  setImage(MARKS, marksHistory[historyIndex])
+	},
+	toggleFill: () => {
+	  clearLayer(TOOLS)
+	  setWhiteboardState(FILL_ACTIVE, !wState[FILL_ACTIVE])
+	  drawMeasureText(
+	    wState[MEASUREMENT].mouseDown,
+	    wState[MEASUREMENT].mouseUp,
+	    wState[MEASUREMENT].gridType
+	  )
+	},
+	undo: () => {
+	  historyIndex -= 1
+	  setImage(MARKS, marksHistory[historyIndex])
+	},
+	parallelDown: () => {
+	  if (wState[TOOL] !== TEXT) {
+	    constraint = PARALLEL
+	  } 
+	},
+	ctrlDown: () => {
+	  if (wState[TOOL] !== TEXT) {
+	    constraint = [
+	      COMMITTED, 
+	      VERTICAL_HORIZONTAL,
+	      HEXAGONAL,
+	      VERTICAL_HORIZONTAL,
+	      DIAGONAL, 
+	      DOZENAL
+	    ][
+	      [RECTANGLE, ELLIPSE].includes(wState[TOOL]) 
+		? 4
+		: wState[TOOL] === LINE 
+		? 5
+		: wState[GRID_TYPE].x
+	    ]
+	    if (constraint === COMMITTED) {
+	      wState[TOOL] = COMMITTED
+	    }
+	    controlIsDown = true
+	  }
+	},
+	perpendicularDown: () => {
+	  if (wState[TOOL] !== TEXT) {
+	    constraint = PERPENDICULAR
+	  } 
+	},
+	releaseConstraints: () => {
+	  if (wState[TOOL] !== TEXT) {
+	    if (constraint === COMMITTED) {
+	      wState[TOOL] = lastTool
+	    }
+	    constraint = NONE
+	  }
+	},
+	spacebarDown: () => {
+	  if (wState[TOOL] !== TEXT) {
+	    spaceIsDown = true
+	  }
+	},
+	spacebarUp: () => {
+	  if (wState[TOOL] !== TEXT) {
+	    if (wState[TOOL] === PAINT_BRUSH) {
+	      layers[MARKS].beginPath()
+	    }
+	    spaceIsDown = false
+	  }
+	}
+      }
 
       document.addEventListener('keydown', (event) => {
 	if (wState[TOOL] === TEXT) {
@@ -3511,17 +3658,11 @@
 	    break
 	  case 'g':
 	  case 'G':
-	    if (wState[TOOL] !== TEXT) {
-	      wState[GRID_TYPE].set((wState[GRID_TYPE].x + 1) % 4, wState[GRID_TYPE].y)
-	      setGrid()
-	    }
+	    commands.cycleGrids()
 	    break
 	  case 'j':
 	  case 'J':
-	    if (wState[TOOL] !== TEXT) {
-	      wState[GRID_TYPE].set(wState[GRID_TYPE].x, (wState[GRID_TYPE].y + 1) % 3)
-	      setGrid()
-	    }
+	    commands.cycleGridStyles()
 	    break
 	  case 'i':
 	  case 'I':
@@ -3614,12 +3755,7 @@
 	    break
 	  case 'v':
 	  case 'V':
-	    if (wState[TOOL] !== TEXT && !controlIsDown) {
-	      setVanishingPoint(wState[MOUSE_MOVE_LOCATION].x, wState[MOUSE_MOVE_LOCATION].y)
-	      wState[TOOL] = GRID	      
-	      vanishingPointVisible = true
-	      drawVanishingPoint()
-	    }
+	    commands.vanishingDown()
 	    break
 	  case 'Enter':
 	    if (wState[TOOL] !== TEXT) {
@@ -3652,7 +3788,7 @@
 	  event.preventDefault()
 	  if (wState[TOOL] !== TEXT) {
 	    constraint = ARC
-	  }else { 
+	  } else { 
 	    wState[PRINT_HEAD_LOCATION].x += wState[FONT_WIDTH]
 	    drawTextCursor()
 	  } 
@@ -3662,7 +3798,7 @@
 	  if (wState[TOOL] !== TEXT) {
 	    constraint = VERTICAL
 	  } else { 
-	   wState[PRINT_HEAD_LOCATION].y -= wState[LINE_SPACING]
+	    wState[PRINT_HEAD_LOCATION].y -= wState[LINE_SPACING]
 	    drawTextCursor()
 	  }
 	  break
@@ -3685,26 +3821,7 @@
 	  }
 	  break
 	case 'Control':
-	  if (wState[TOOL] !== TEXT) {
-	    constraint = [
-	      COMMITTED, 
-	      VERTICAL_HORIZONTAL,
-	      HEXAGONAL,
-	      VERTICAL_HORIZONTAL,
-	      DIAGONAL, 
-	      DOZENAL
-	    ][
-	      [RECTANGLE, ELLIPSE].includes(wState[TOOL]) 
-		? 4
-		: wState[TOOL] === LINE 
-		  ? 5
-		  : wState[GRID_TYPE].x
-	    ]
-	    if (constraint === COMMITTED) {
-	      wState[TOOL] = COMMITTED
-	    }
-	    controlIsDown = true
-	  }
+	  commands.ctrlDown()
 	  break
 	case 'Shift':
 	  if (wState[TOOL] !== TEXT) {
@@ -3713,53 +3830,27 @@
 	  break
 	case '/':
 	  event.preventDefault()
-	  if (wState[TOOL] !== TEXT) {
-	    constraint = PARALLEL
-	  } 
+	  commands.parallelDown()
 	  break
 	case "'":
 	  event.preventDefault()
-	  if (wState[TOOL] !== TEXT) {
-	    constraint = PERPENDICULAR
-	  } 
+	  commands.perpendicularDown()
 	  break
 	case 'p':
 	case 'P':
-	  if (wState[TOOL] !== TEXT) {
-	    clearLayer(TOOLS)
-	    layers[MARKS].lineJoin = 'round'
-	    layers[MARKS].lineCap = 'round'
-	    setWhiteboardState(TOOL, PAINT_BRUSH)
-	    lastTool = PAINT_BRUSH
-	  }
+	  commands.usePaintbrush()
 	  break
 	case 'r':
 	case 'R':
-	  if (wState[TOOL] !== TEXT && !controlIsDown) {
-	    clearLayer(TOOLS)
-	    layers[MARKS].lineJoin = 'miter'
-	    layers[MARKS].lineCap = 'butt'
-	    setWhiteboardState(TOOL, RECTANGLE)
-	    lastTool = RECTANGLE
-	  }
+	  commands.useRectangle()
 	  break
 	case 'e':
 	case 'E':
-	  if (wState[TOOL] !== TEXT) {
-	    clearLayer(TOOLS)
-	    setWhiteboardState(TOOL, ELLIPSE)
-	    lastTool = ELLIPSE
-	  }
+	  commands.useEllipse()
 	  break
 	case 'l':
 	case 'L':
-	  if (wState[TOOL] !== TEXT) {
-	    clearLayer(TOOLS)
-	    layers[MARKS].lineJoin = 'miter'
-	    layers[MARKS].lineCap = 'butt'
-	    setWhiteboardState(TOOL, LINE)
-	    lastTool = LINE
-	  }
+	  commands.useLine()
 	  break
 	case 'm':
 	case 'M':
@@ -3779,19 +3870,11 @@
 	  break
 	case 'f':
 	case 'F':
-	  clearLayer(TOOLS)
-	  setWhiteboardState(FILL_ACTIVE, !wState[FILL_ACTIVE])
-	  drawMeasureText(
-	    wState[MEASUREMENT].mouseDown,
-	    wState[MEASUREMENT].mouseUp,
-	    wState[MEASUREMENT].gridType
-	  )
+	  commands.toggleFill()
 	  break
 	case ' ':
 	  event.preventDefault()
-	  if (wState[TOOL] !== TEXT) {
-	    spaceIsDown = true
-	  }
+	  commands.spacebarDown()
 	  break
 	case 'Escape':
 	  mouseIsDown = false
@@ -3810,6 +3893,7 @@
 	case 'Backspace':
 	  if (wState[TOOL] !== TEXT) {
 	    clearLayer(MARKS)
+	    updateMarksHistory()
 	  } else {
 	   wState[PRINT_HEAD_LOCATION].x -= wState[FONT_WIDTH]
 	    layers[MARKS].clearRect(
@@ -3839,26 +3923,18 @@
 
 	switch (event.key) {
 	case ' ':
-	  if (wState[TOOL] !== TEXT) {
-	    if (wState[TOOL] === PAINT_BRUSH) {
-	      layers[MARKS].beginPath()
-	    }
-	    spaceIsDown = false
-	    break
-	  }
+	  commands.spacebarUp()
+	  break
 	case 'ArrowRight':
 	case 'ArrowUp':
 	case 'ArrowLeft':
 	case 'ArrowDown':
 	case '/':
 	case "'":
+	  commands.releaseConstraints()
+	  break
 	case 'Control':
-	  if (wState[TOOL] !== TEXT) {
-	    if (constraint === COMMITTED) {
-	      wState[TOOL] = lastTool
-	    }
-	    constraint = NONE
-	  }
+	  commands.releaseConstraints()
 	  controlIsDown = false
 	  break
 	case '`':
@@ -3899,26 +3975,18 @@
 	  break
 	case 'v':
 	case 'V':
-	  if (wState[TOOL] !== TEXT) { 
-	    if (controlIsDown) {
-	      paste(MARKS, clipboard, currentMouseLocation)
-	    } else {
-	      wState[TOOL] = lastTool
-	    }
-	  } 
+	  commands.vanishingUp()
 	  break
 	case 'z':
 	case 'Z':
 	  if (wState[TOOL] !== TEXT && controlIsDown && historyIndex > 0) {
-	    historyIndex -= 1
-	    setImage(MARKS, marksHistory[historyIndex])
+	    commands.undo()
 	  }
 	  break
 	case 'y':
 	case 'Y':
 	  if (wState[TOOL] !== TEXT && controlIsDown && historyIndex < marksHistory.length - 1) {
-	    historyIndex += 1
-	    setImage(MARKS, marksHistory[historyIndex])
+	    commands.redo()
 	  }
 	  break
 	}
@@ -4044,5 +4112,6 @@
     <script src="https://d3js.org/d3.v5.min.js"></script>
     <script src="chemistry.js"></script>
     <script src="mech.js"></script>
+    <script src="games.js"></script>
   </body>
 </html>
