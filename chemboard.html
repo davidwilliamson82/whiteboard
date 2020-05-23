@@ -3344,6 +3344,54 @@
 	}
       }
 
+      const getPassword = (options={}) => {
+	const {
+	  passwordLength=12,
+	  useUppercase=true,
+	  useLowercase=true,
+	  useNumbers=true,
+	  useSymbols=true
+	} = options
+	
+	let availableCharacters = ''
+	const uppercase = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+	const lowercase = 'abcdefjhijklmnopqrstuvwxyz'
+	const numbers = '01234567890'
+	const symbols = "!\"#$%&'()*+, -./:;<=>?@[\]^_`{|}~"
+	if (useUppercase) { availableCharacters += uppercase }
+	if (useLowercase) { availableCharacters += lowercase }
+	if (useNumbers) { availableCharacters += numbers }
+	if (useSymbols) { availableCharacters += symbols }
+
+	const validateCharacters = () => {
+	  let remaining = passwordLength
+	  let password = ''
+	  let setsUsed = {
+	    uppercase: false,
+	    lowercase: false,
+	    numbers: false,
+	    symbols: false
+	  }
+	  while (remaining) {
+	    password += availableCharacters[Math.floor(Math.random() * availableCharacters.length)]
+	    remaining -= 1
+	  }
+	  for (let char of password) {
+	    if (uppercase.includes(char)) { setsUsed.uppercase = true }
+	    if (lowercase.includes(char)) { setsUsed.lowercase = true }
+	    if (numbers.includes(char)) { setsUsed.numbers = true }
+	    if (symbols.includes(char)) { setsUsed.symbols = true }
+	  }
+	  if (useUppercase && !setsUsed.uppercase) { return validateCharacters() }
+	  else if (useLowercase && !setsUsed.lowercase) { return validateCharacters() }
+	  else if (useNumbers && !setsUsed.numbers) { return validateCharacters() }
+	  else if (useSymbols && !setsUsed.symbols) { return validateCharacters() }
+	  else return password
+	}
+	return validateCharacters()
+      }
+      
+
       // Typing
       function typingFunction (e) {
 	if (![
@@ -3838,6 +3886,8 @@
 	  break
 	case 'p':
 	case 'P':
+	case 'q':
+	case 'Q':
 	  commands.usePaintbrush()
 	  break
 	case 'r':
@@ -3850,6 +3900,8 @@
 	  break
 	case 'l':
 	case 'L':
+	case 'w':
+	case 'W':
 	  commands.useLine()
 	  break
 	case 'm':
