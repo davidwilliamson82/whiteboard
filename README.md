@@ -27,6 +27,7 @@ TOOLS: <br />
 &nbsp;&nbsp;R - rectangle<br />
 &nbsp;&nbsp;E - ellipse<br />
 &nbsp;&nbsp;L - line<br />
+&nbsp;&nbsp;B - bezier curve<br />
 &nbsp;&nbsp;T - text<br />
 &nbsp;&nbsp;M - measure<br />
 &nbsp;&nbsp;Z - zoom<br />
