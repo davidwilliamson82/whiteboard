@@ -28,6 +28,7 @@ TOOLS: <br />
 &nbsp;&nbsp;E - ellipse<br />
 &nbsp;&nbsp;L - line<br />
 &nbsp;&nbsp;B - bezier curve<br />
+&nbsp;&nbsp;O - polygon<br />
 &nbsp;&nbsp;T - text<br />
 &nbsp;&nbsp;M - measure<br />
 &nbsp;&nbsp;Z - zoom<br />
@@ -80,5 +81,6 @@ QUERY PARAMETERS: <br />
 HELPFUL FUNCTIONS: <br />
 &nbsp;&nbsp;doExampleProblem(subject, upperLimit) // subject is either MATH or READING<br />
 &nbsp;&nbsp;reading problems hit Merriam-Webster api https://dictionaryapi.com/products/api-learners-dictionary<br />
-&nbsp;&nbsp;straightenGrid() squares rectangular offset, straightens hex angle, centers vanishing point.<br />
+&nbsp;&nbsp;straightenGrids() Squares rectangular offset, straightens hex angle, centers vanishing point.<br />
+&nbsp;&nbsp;setPolygonSides(sides) Specifies how many sides the polygons drawn by the polygon tool have.<br />
 &nbsp;&nbsp;toggleWallpaperStyle() Makes wallpaper bigger, and scrollable<br />
