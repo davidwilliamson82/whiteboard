@@ -486,7 +486,7 @@
 						d: Math.cos(angle)
 					})
 				}
-						}
+			}
 
 						// UTILITIES
 						const bound = (value, min=0.0, max=1.0) => {
@@ -931,6 +931,8 @@
 						const ELLIPSE = 'ELLIPSE' // e
 						const RECTANGLE = 'RECTANGLE' // r
 						const LINE = 'LINE' // l
+						const POLYGON = 'POLYGON'
+						const POLYGON_SIDES = 'POLYGON_SIDES'
 						const ARC = 'ARC' // a
 						const TEXT = 'TEXT' // t
 						const ERASER = 'ERASER' // spacebar (held)
@@ -1434,6 +1436,72 @@
 						}
 						setWhiteboardState(ANGLE, constraints[constraint](toolLocation).getAngle(wState[MOUSE_DOWN_LOCATION]))
 					}
+					updateMarksHistory()
+				}
+			}
+
+			tools[POLYGON] = {
+				mouseDown: (toolLocation) => {
+					clearLayer(TOOLS);
+					layers[MARKS].lineCap = 'round';
+					const polygon = document.createElementNS(svgNameSpace, 'polygon')
+					polygon.setAttribute('id', 'polygon')
+					polygon.setAttribute('stroke', wState[FILL_ACTIVE] || spaceIsDown ? 'none' : wState[TOOLS_COLOR].getRgba())
+					polygon.setAttribute('fill', wState[FILL_ACTIVE] || spaceIsDown ? wState[TOOLS_COLOR].getRgba() : 'none')
+					polygon.setAttribute('stroke-width', wState[BRUSHES][wState[BRUSH]].width)
+					layers[TOOLS].appendChild(polygon)
+				},
+				mouseMove: (toolLocation) => {
+					const length = constraints[constraint](toolLocation).length(wState[MOUSE_DOWN_LOCATION]);
+					let headAngle = constraints[constraint](toolLocation).getAngle(wState[MOUSE_DOWN_LOCATION]);
+					const angularInterval = (2 * Math.PI) / wState[POLYGON_SIDES];
+
+					let head = constraints[constraint](toolLocation);
+					let pointsString = `${head.x},${head.y}`
+			
+					for (let i = 0; i < wState[POLYGON_SIDES]; i += 1) {
+						const next = new Vector2({ angle: headAngle + angularInterval, magnitude: length }).add(wState[MOUSE_DOWN_LOCATION]);
+						pointsString += ` ${next.x},${next.y}`;
+						headAngle += angularInterval;
+					}
+					const polygon = document.getElementById('polygon');
+					polygon.setAttribute('points', pointsString);
+				},
+				mouseUp: (toolLocation) => {
+					if (constraints[constraint](toolLocation)) { // mouseIsDown && 
+						clearLayer(TOOLS);
+						layers[MARKS].beginPath();
+						const length = constraints[constraint](toolLocation).length(wState[MOUSE_DOWN_LOCATION]);
+						let headAngle = constraints[constraint](toolLocation).getAngle(wState[MOUSE_DOWN_LOCATION]);
+						const angularInterval = (2 * Math.PI) / wState[POLYGON_SIDES];
+
+						let head = constraints[constraint](toolLocation);
+						layers[MARKS].moveTo(
+							head.x,
+							head.y
+						);
+						for (let i = 0; i < wState[POLYGON_SIDES]; i += 1) {
+							const next = new Vector2({ angle: headAngle + angularInterval, magnitude: length }).add(wState[MOUSE_DOWN_LOCATION]);
+							layers[MARKS].lineTo(
+								next.x,
+								next.y
+							);
+							headAngle += angularInterval;
+						}
+						layers[MARKS].closePath();
+						if (spaceIsDown) {
+							layers[MARKS].save()
+							layers[MARKS].clip()
+							clearLayer(MARKS)
+							layers[MARKS].restore()
+						} else if (wState[FILL_ACTIVE]) {
+							layers[MARKS].fill();
+						} else {
+							layers[MARKS].stroke();
+						}
+						
+					}
+					
 					updateMarksHistory()
 				}
 			}
@@ -2089,6 +2157,7 @@
 				layers[layer].beginPath()
 				layers[layer].moveTo(fv.x, fv.y)
 				layers[layer].lineTo(tv.x, tv.y)
+				layers[layer].closePath()
 				layers[layer].stroke()
 			}
 
@@ -3240,6 +3309,11 @@
 				setVanishingPoint(wState[SCREEN_CENTER])
       }
 
+			const setPolygonSides = (sides) => {
+				sides = parseInt(Math.max(sides, 3));
+				setWhiteboardState(POLYGON_SIDES, sides);
+			};
+
       const addAngle = (degrees) => {
 				setWhiteboardState(ANGLE, wState[ANGLE] + (degrees * Math.PI / 180))
 			}
@@ -3379,7 +3453,7 @@
 				if (typeof problemState === 'string') {
 					wState[PROBLEM_STATE].set([MATH, READING].indexOf(problemState) + 1, 0)
 					setGrid()
-				} else if (typeof problemState === 'number') {
+				} else if (typeof problemState == 'number') {
 					wState[PROBLEM_STATE].set(problemState, 0)
 					setGrid()
 				}
@@ -3390,6 +3464,7 @@
 					const negativeMagnitude = limit < 0 ? Math.abs(limit) : 0
 					const range = Math.abs(limit) + negativeMagnitude + 1
 					const interval = (wState[SCREEN_SIZE].x - 160) / (Math.abs(limit) + negativeMagnitude)
+					console.log({ interval, limit, negativeMagnitude})
 					const coefficient = getGridCoefficient(interval, 5)
 					wState[PRINT_HEAD_LOCATION].set(80, wState[SCREEN_SIZE].y - 120)
 					drawLine(
@@ -3402,6 +3477,7 @@
 					
 					let label = 0 - negativeMagnitude
 					const labelSize = 10 + 360 / range
+					console.log(wState[PROBLEM_STATE])
 					while (label <= Math.abs(limit)) {
 						drawLine(
 							GRID,
@@ -3417,6 +3493,8 @@
 							wState[BRUSHES][10].color,
 							labelSize
 						)
+						console.log({ interval, coefficient})
+						console.log({ printHeadLocation: wState[PRINT_HEAD_LOCATION] })
 						wState[PRINT_HEAD_LOCATION].x += interval * coefficient
 						label += coefficient
 					}
@@ -3728,6 +3806,15 @@
 						layers[MARKS].lineCap = 'butt'
 						setWhiteboardState(TOOL, LINE)
 						lastTool = LINE
+					}
+				},
+				usePolygon: () => {
+					if (wState[TOOL] !== TEXT) {
+						clearLayer(TOOLS)
+						layers[MARKS].lineJoin = 'round'
+						layers[MARKS].lineCap = 'round'
+						setWhiteboardState(TOOL, POLYGON)
+						lastTool = POLYGON
 					}
 				},
 				useBezier: () => {
@@ -4064,6 +4151,10 @@ window.addEventListener('keydown', function (event) {
 	case 'w':
 	case 'W':
 	  commands.useLine()
+		break
+	case 'o':
+	case 'O':
+	  commands.usePolygon()
 		break
 	case 'b':
 	case 'B':
