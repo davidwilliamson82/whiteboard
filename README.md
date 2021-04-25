@@ -41,7 +41,7 @@ OTHER CONTROLS: <br />
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Left - paintbrush color<br />
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Center - overlay color<br />
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Right - grid color<br />
-&nbsp;&nbsp;'-', '=' - adjust current brush width<br />
+&nbsp;&nbsp;'-', '=' - adjust current brush width, or polygon sides<br />
 &nbsp;&nbsp;'\[', ']' - adjust font size<br />
 &nbsp;&nbsp;F - toggle fill for shapes<br />
 &nbsp;&nbsp;V - place vanishing point, hold down to scale grid units<br />
